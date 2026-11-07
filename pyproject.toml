@@ -1,0 +1,22 @@
+[project]
+name = "blindspot"
+version = "0.0.0"
+description = "Measures which real Kubernetes failures default monitoring catches"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+
+[tool.pytest.ini_options]
+pythonpath = ["harness"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+# The harness runs fixed shell commands it builds itself, on a throwaway lab cluster.
+ignore = ["S602", "S603", "S604", "S607", "S310", "S108", "S104"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]

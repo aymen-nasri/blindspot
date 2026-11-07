@@ -84,7 +84,9 @@ def watch_prometheus(stop):
         if forward is None or forward.poll() is not None:
             forward = subprocess.Popen(
                 "kubectl -n monitoring port-forward svc/kps-prometheus 19090:9090",
-                shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             stop.wait(3)
         try:
@@ -96,7 +98,7 @@ def watch_prometheus(stop):
                     seen.setdefault(f"{alert['state']}_t", now)
                     seen.setdefault("activeAt", alert.get("activeAt"))
                     seen["last_seen"] = now
-        except Exception:
+        except Exception:  # noqa: S110 - a missed poll is retried in 15 seconds; Prometheus may be down on purpose
             pass
         stop.wait(15)
     if forward:
@@ -126,7 +128,9 @@ def api_probe(stop):
         started = time.time()
         done = sh(
             "kubectl -n shop run apiprobe --image=registry.k8s.io/pause:3.10 --restart=Never --dry-run=server -o name",
-            check=False, timeout=30, quiet=True,
+            check=False,
+            timeout=30,
+            quiet=True,
         )
         record_probe("api", done.returncode == 0, started)
         stop.wait(10)
@@ -207,13 +211,16 @@ def inject(fault):
     notes = {}
     if fault in ("crashloop", "alertmanager-down"):
         if fault == "alertmanager-down":
-            sh("kubectl -n monitoring patch alertmanager kps-alertmanager --type merge -p '{\"spec\":{\"replicas\":0}}'")
+            sh('kubectl -n monitoring patch alertmanager kps-alertmanager --type merge -p \'{"spec":{"replicas":0}}\'')
         patch = [{"op": "replace", "path": "/spec/template/spec/containers/0/command", "value": ["sh", "-c", "exit 1"]}]
         sh(f"kubectl -n shop patch deploy web --type json -p '{json.dumps(patch)}'")
     elif fault == "cpu-throttle":
         sh("kubectl -n shop set resources deploy/web -c web --limits=cpu=20m")
     elif fault == "dns-nxdomain":
-        edit_corefile("example.com:53 {\n    errors\n    template IN ANY example.com {\n        match .*\n        rcode NXDOMAIN\n    }\n}\n")
+        edit_corefile(
+            "example.com:53 {\n    errors\n    template IN ANY example.com {\n"
+            "        match .*\n        rcode NXDOMAIN\n    }\n}\n"
+        )
     elif fault == "dns-slow":
         edit_corefile("example.com:53 {\n    errors\n    erratic {\n        delay 1 5s\n    }\n}\n")
     elif fault == "packet-loss":
@@ -223,8 +230,12 @@ def inject(fault):
             if tc.returncode == 0:
                 notes["method"] = "tc netem, 40% loss on the backend pods"
             else:
-                on_node(node, f"nsenter -t {pid} -n iptables -I INPUT -m statistic --mode random --probability 0.4 -j DROP")
-                notes["method"] = "iptables statistic, 40% of packets into the backend pods dropped (tc netem unavailable)"
+                on_node(
+                    node, f"nsenter -t {pid} -n iptables -I INPUT -m statistic --mode random --probability 0.4 -j DROP"
+                )
+                notes["method"] = (
+                    "iptables statistic, 40% of packets into the backend pods dropped (tc netem unavailable)"
+                )
     elif fault == "mtu-blackhole":
         api_node = pods("api")[0][0]
         web = pods("web")
@@ -235,28 +246,46 @@ def inject(fault):
         notes["method"] = f"route MTU 1000 on {api_node} toward the web pods, with ICMP 'fragmentation needed' dropped"
     elif fault == "netpol-deny":
         policy = {
-            "apiVersion": "networking.k8s.io/v1", "kind": "NetworkPolicy",
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "NetworkPolicy",
             "metadata": {"name": "blindspot-deny", "namespace": "shop"},
             "spec": {"podSelector": {"matchLabels": {"app": "api"}}, "policyTypes": ["Ingress"]},
         }
         sh("kubectl apply -f -", stdin=json.dumps(policy))
     elif fault == "webhook-down":
         webhook = {
-            "apiVersion": "admissionregistration.k8s.io/v1", "kind": "ValidatingWebhookConfiguration",
+            "apiVersion": "admissionregistration.k8s.io/v1",
+            "kind": "ValidatingWebhookConfiguration",
             "metadata": {"name": "blindspot-broken"},
-            "webhooks": [{
-                "name": "broken.blindspot.test", "admissionReviewVersions": ["v1"], "sideEffects": "None",
-                "failurePolicy": "Fail", "timeoutSeconds": 5,
-                "clientConfig": {"service": {"name": "missing", "namespace": "default", "path": "/validate", "port": 443}},
-                "rules": [{"operations": ["CREATE", "UPDATE"], "apiGroups": [""], "apiVersions": ["v1"], "resources": ["pods"]}],
-                "namespaceSelector": {"matchExpressions": [
-                    {"key": "kubernetes.io/metadata.name", "operator": "NotIn", "values": ["kube-system"]}
-                ]},
-            }],
+            "webhooks": [
+                {
+                    "name": "broken.blindspot.test",
+                    "admissionReviewVersions": ["v1"],
+                    "sideEffects": "None",
+                    "failurePolicy": "Fail",
+                    "timeoutSeconds": 5,
+                    "clientConfig": {
+                        "service": {"name": "missing", "namespace": "default", "path": "/validate", "port": 443}
+                    },
+                    "rules": [
+                        {
+                            "operations": ["CREATE", "UPDATE"],
+                            "apiGroups": [""],
+                            "apiVersions": ["v1"],
+                            "resources": ["pods"],
+                        }
+                    ],
+                    "namespaceSelector": {
+                        "matchExpressions": [
+                            {"key": "kubernetes.io/metadata.name", "operator": "NotIn", "values": ["kube-system"]}
+                        ]
+                    },
+                }
+            ],
         }
         sh("kubectl apply -f -", stdin=json.dumps(webhook))
     elif fault == "prometheus-down":
-        sh("kubectl -n monitoring patch prometheus kps-prometheus --type merge -p '{\"spec\":{\"replicas\":0}}'")
+        sh('kubectl -n monitoring patch prometheus kps-prometheus --type merge -p \'{"spec":{"replicas":0}}\'')
     else:
         raise ValueError(fault)
     return notes
@@ -281,7 +310,8 @@ def score(fault, t0, harm_t):
         observed = {k: dict(v) for k, v in OBSERVED.items()}
     # Baseline means still active when the fault began, not merely seen while the cluster started up.
     baseline = {
-        k for k, v in observed.items()
+        k
+        for k, v in observed.items()
         if min(v.get("pending_t", 1e18), v.get("firing_t", 1e18)) < t0 and v.get("last_seen", 0) >= t0 - 45
     }
     last_status = {}
@@ -290,7 +320,8 @@ def score(fault, t0, harm_t):
             last_status[identity(e["labels"])] = e["status"]
     baseline |= {k for k, status in last_status.items() if status == "firing"}
     startup = {
-        json.loads(k).get("alertname") for k, v in observed.items()
+        json.loads(k).get("alertname")
+        for k, v in observed.items()
         if min(v.get("pending_t", 1e18), v.get("firing_t", 1e18)) < t0
     }
 
@@ -322,8 +353,12 @@ def score(fault, t0, harm_t):
         "outcome": outcome,
         "first_relevant_alert": alert,
         "seconds_after_harm": seconds,
-        "delivered_after_t0": sorted({e["labels"].get("alertname") for e in events if e["t"] >= t0 and e["status"] == "firing"}),
-        "firing_after_t0": sorted({v["labels"].get("alertname") for v in observed.values() if v.get("firing_t", 0) >= t0}),
+        "delivered_after_t0": sorted(
+            {e["labels"].get("alertname") for e in events if e["t"] >= t0 and e["status"] == "firing"}
+        ),
+        "firing_after_t0": sorted(
+            {v["labels"].get("alertname") for v in observed.values() if v.get("firing_t", 0) >= t0}
+        ),
         "baseline_alerts": sorted({json.loads(k).get("alertname") for k in baseline}),
         "seen_before_t0": sorted(startup),
         "watchdog_last_seen_after_t0_s": round(max(after) - t0) if after else None,
