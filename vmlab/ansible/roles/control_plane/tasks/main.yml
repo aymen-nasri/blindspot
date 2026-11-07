@@ -1,0 +1,25 @@
+- name: Write the kubeadm configuration
+  ansible.builtin.template:
+    src: kubeadm.yaml.j2
+    dest: /etc/kubernetes/blindspot-kubeadm.yaml
+    mode: "0600"
+
+- name: Initialise the control plane
+  ansible.builtin.command: kubeadm init --config /etc/kubernetes/blindspot-kubeadm.yaml
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Copy the admin kubeconfig to the runner
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ kubeconfig_out }}"
+    flat: true
+
+- name: Make a join command for the workers
+  ansible.builtin.command: kubeadm token create --ttl 30m --print-join-command
+  register: join
+  changed_when: true
+
+- name: Keep it for the workers' play
+  ansible.builtin.set_fact:
+    join_command: "{{ join.stdout }}"

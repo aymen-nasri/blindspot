@@ -1,0 +1,20 @@
+- name: Install containerd, and the tools the node faults use
+  ansible.builtin.apt:
+    name: [containerd, conntrack, stress-ng, ca-certificates, curl]
+    update_cache: true
+
+- name: Use the systemd cgroup driver, which the kubelet uses by default
+  ansible.builtin.shell: |
+    set -euo pipefail
+    mkdir -p /etc/containerd
+    containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' > /etc/containerd/config.toml
+    grep -q 'SystemdCgroup = true' /etc/containerd/config.toml
+  args:
+    executable: /bin/bash
+    creates: /etc/containerd/config.toml
+
+- name: Restart containerd with that configuration
+  ansible.builtin.systemd:
+    name: containerd
+    state: restarted
+    enabled: true

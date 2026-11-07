@@ -1,0 +1,15 @@
+# Turns the VMs from up.sh into a kubeadm cluster: one control plane and two workers.
+- name: Prepare every node
+  hosts: all
+  become: true
+  roles: [common, containerd, kubernetes]
+
+- name: Start the control plane
+  hosts: control_plane
+  become: true
+  roles: [control_plane]
+
+- name: Join the workers
+  hosts: workers
+  become: true
+  roles: [workers]
