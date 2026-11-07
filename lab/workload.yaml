@@ -1,0 +1,178 @@
+# The reference workload: a small web app and its backend, on different nodes. A request to /work
+# resolves an outside name, does some CPU work and calls the backend, so DNS, CPU and network faults
+# all hurt something the outside probes can see.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app
+  namespace: shop
+data:
+  app.py: |
+    import hashlib
+    import http.server
+    import os
+    import socket
+    import socketserver
+    import urllib.request
+
+    ROLE = os.environ["ROLE"]
+    API = "http://api.shop.svc.cluster.local.:8080"
+    BIG = b"x" * 1_048_576
+
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/healthz":
+                return self.reply(200, b"ok")
+            if ROLE == "api":
+                return self.reply(200, BIG if self.path.startswith("/big") else b"pong")
+            if not self.path.startswith("/work"):
+                return self.reply(404, b"")
+            try:
+                socket.getaddrinfo("example.com.", 443)
+                hashlib.pbkdf2_hmac("sha256", b"blindspot", b"salt", 20_000)
+                url = API + ("/big" if "big=1" in self.path else "/ping")
+                with urllib.request.urlopen(url, timeout=2) as response:
+                    body = response.read()
+                return self.reply(200, str(len(body)).encode())
+            except Exception as error:
+                return self.reply(503, repr(error).encode())
+
+        def reply(self, code, body):
+            self.send_response(code)
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+
+    class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
+        daemon_threads = True
+
+
+    Server(("", 8080), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: shop
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: blindspot-worker
+      containers:
+        - name: web
+          image: python:3.12-alpine
+          command: [python, -u, /app/app.py]
+          env:
+            - name: ROLE
+              value: web
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: app
+              mountPath: /app
+      volumes:
+        - name: app
+          configMap:
+            name: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: shop
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: blindspot-worker2
+      containers:
+        - name: api
+          image: python:3.12-alpine
+          command: [python, -u, /app/app.py]
+          env:
+            - name: ROLE
+              value: api
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: app
+              mountPath: /app
+      volumes:
+        - name: app
+          configMap:
+            name: app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: shop
+spec:
+  type: NodePort
+  selector:
+    app: web
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: shop
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 8080
+      targetPort: 8080
