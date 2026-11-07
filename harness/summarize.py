@@ -9,7 +9,8 @@ rows = sorted(
     key=lambda r: r.get("number", 0),
 )
 lines = [
-    "| # | Fault | Status | Harm after (s) | Outcome | First relevant alert | After harm (s) | Delivered after the fault |",
+    "| # | Fault | Status | Harm after (s) | Outcome | First relevant alert | After harm (s) "
+    "| Delivered after the fault |",
     "|---|---|---|---|---|---|---|---|",
 ]
 for r in rows:
