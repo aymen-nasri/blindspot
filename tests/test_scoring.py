@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 import trial
+
 from faults import FAULTS
 
 T0 = 1000.0

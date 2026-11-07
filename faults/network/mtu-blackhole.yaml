@@ -1,0 +1,23 @@
+id: mtu-blackhole
+number: 11
+name: MTU black hole
+class: harm
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: route-mtu
+  params:
+    namespace: shop
+    from_app: api
+    to_app: web
+    mtu: 1000
+harm:
+  probe: big
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: NodeNetwork.*
+why: On the hop carrying the backend's replies, the MTU drops to 1000 and the ICMP that would report it is dropped.
+  Small replies work, and large ones hang.

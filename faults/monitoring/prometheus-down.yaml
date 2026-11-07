@@ -1,0 +1,23 @@
+id: prometheus-down
+number: 33
+name: Prometheus down
+class: monitoring
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: scale-cr
+  params:
+    namespace: monitoring
+    kind: prometheus
+    name: kps-prometheus
+    replicas: 0
+harm:
+  gone: prometheus
+relevant:
+- alertname: Prometheus.*
+- alertname: TargetDown
+  labels:
+    job: .*prometheus.*
+why: All detection silently stops. Nothing inside the cluster can report it, so only a dead man's switch on Watchdog
+  could notice.

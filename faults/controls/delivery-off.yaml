@@ -1,0 +1,16 @@
+id: delivery-off
+number: 0
+name: 'Delivery control: no receiver'
+class: control
+runs_on:
+- kind
+window_minutes: 10
+delivery: 'off'
+inject: []
+harm: null
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+expect: 'invalid: receiver'
+why: When nothing can receive alerts, trials must be invalid, never scored as missed.

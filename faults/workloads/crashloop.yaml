@@ -1,0 +1,30 @@
+id: crashloop
+number: 1
+name: App keeps crashing
+class: harm
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: deployment-patch
+  params:
+    namespace: shop
+    name: web
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: web
+              command:
+              - sh
+              - -c
+              - exit 1
+harm:
+  probe: web
+relevant:
+- alertname: Kube(Pod|Deployment|Container|ReplicaSet).*
+  labels:
+    namespace: shop
+why: A bad release that crashes on start. The web Deployment uses Recreate, so every pod is replaced and the app
+  goes down.

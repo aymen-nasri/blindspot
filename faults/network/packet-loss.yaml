@@ -1,0 +1,23 @@
+id: packet-loss
+number: 10
+name: Packet loss between pods
+class: harm
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: pod-netem
+  params:
+    namespace: shop
+    app: api
+    loss_percent: 40
+harm:
+  probe: web
+  p95_ms: 1500
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: NodeNetwork.*
+why: 40% of packets into the backend are lost, so requests retry, slow down and sometimes fail. Uses tc netem, or
+  iptables when netem isn't available.

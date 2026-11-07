@@ -1,0 +1,36 @@
+id: cpu-throttle
+number: 5
+name: CPU throttled
+class: harm
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: deployment-patch
+  params:
+    namespace: shop
+    name: web
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: web
+              resources:
+                limits:
+                  cpu: 20m
+                requests:
+                  cpu: 10m
+harm:
+  probe: web
+  p95_ms: 1500
+relevant:
+- alertname: CPUThrottlingHigh
+  labels:
+    namespace: shop
+- alertname: Kube(Pod|Deployment|Container|ReplicaSet).*
+  labels:
+    namespace: shop
+why: A CPU limit far below what the app needs, so requests queue and latency climbs. The request drops too, because
+  Kubernetes refuses a limit below the request. CPUThrottlingHigh has info severity, and InfoInhibitor is designed
+  to mute it when nothing more serious fires.
