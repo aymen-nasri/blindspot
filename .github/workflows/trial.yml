@@ -43,7 +43,8 @@ jobs:
     timeout-minutes: 80
     strategy:
       fail-fast: false
-      max-parallel: 20
+      # The free plan runs 20 jobs at once. Leaving 4 free means CI and Pages never wait hours behind trials.
+      max-parallel: 16
       matrix:
         fault: ${{ fromJSON(needs.plan.outputs.faults) }}
         trial: ${{ fromJSON(needs.plan.outputs.trials) }}
