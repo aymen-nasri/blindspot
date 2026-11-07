@@ -232,16 +232,25 @@ def test_faults_list_runs(capsys):
 
 def test_score_summarises_results(tmp_path, capsys):
     (tmp_path / "a.json").write_text(
-        '{"number": 1, "name": "a", "class": "harm", "status": "valid", "outcome": "caught"}'
+        '{"fault": "a", "number": 1, "name": "a", "class": "harm", "status": "valid", "outcome": "caught",'
+        ' "seconds_after_harm": 900}'
     )
     (tmp_path / "b.json").write_text(
-        '{"number": 8, "name": "b", "class": "harm", "status": "valid", "outcome": "missed"}'
+        '{"fault": "b", "number": 8, "name": "b", "class": "harm", "status": "valid", "outcome": "missed"}'
     )
-    (tmp_path / "c.json").write_text('{"number": 0, "name": "c", "class": "control", "control_passed": true}')
-    assert main(["score", str(tmp_path)]) == 0
+    (tmp_path / "c.json").write_text(
+        '{"fault": "c", "number": 0, "name": "c", "class": "control", "control_passed": true}'
+    )
+    assert main(["score", str(tmp_path), "--min-valid", "1"]) == 0
     out = capsys.readouterr().out
-    assert "Caught 1 of 2 valid faults." in out
+    assert "Caught 1 of 2 faults, after a median of about 15 minutes." in out
     assert "Controls passed: 1 of 1." in out
+
+
+def test_score_reads_the_committed_v0_results(capsys):
+    """Old result files still load, with their class taken from the catalogue."""
+    assert main(["--catalog", str(ROOT / "faults"), "score", str(ROOT / "results/v0.0"), "--min-valid", "1"]) == 0
+    assert "Caught 1 of 10 faults" in capsys.readouterr().out
 
 
 # --- Recovery ------------------------------------------------------------------------------------

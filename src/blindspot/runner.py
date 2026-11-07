@@ -1,9 +1,12 @@
 """One trial: build a fresh lab, break one thing, watch, put it back, and write down what happened."""
 
 import json
+import os
 import platform
 import time
 from pathlib import Path
+
+import yaml
 
 from blindspot import __version__, guard, lab
 from blindspot.catalog import Fault, Harm
@@ -33,6 +36,43 @@ def recovered(harm: Harm, recorder: Recorder, at: float) -> bool:
     return harm.probe is None or not harmed_by_probes(recorder.snapshot().probes, harm.probe, at, harm.p95_ms)
 
 
+def runner_details() -> dict:
+    """What the trial ran on, so a change of runner hardware shows up in the results."""
+    details: dict = {"python": platform.python_version(), "kernel": platform.release(), "cpus": os.cpu_count()}
+    try:
+        meminfo = Path("/proc/meminfo").read_text()
+        kb = int(next(line.split()[1] for line in meminfo.splitlines() if line.startswith("MemTotal:")))
+        details["memory_gb"] = round(kb / 1024 / 1024, 1)
+    except (OSError, StopIteration, ValueError):
+        pass
+    for name in ("ImageOS", "ImageVersion", "RUNNER_ENVIRONMENT"):
+        if os.environ.get(name):
+            details[name] = os.environ[name]
+    return details
+
+
+def timings() -> dict:
+    """The live intervals that limit how precise any time can be."""
+    found: dict = {}
+    try:
+        config = yaml.safe_load(prometheus_get("/api/v1/status/config")["data"]["yaml"])
+        found.update({k: config["global"].get(k) for k in ("scrape_interval", "evaluation_interval")})
+    except Exception:  # noqa: BLE001 - recorded as unknown
+        found["prometheus"] = "unknown"
+    try:
+        found.update(lab.alertmanager_route())
+    except Exception:  # noqa: BLE001 - recorded as unknown
+        found["alertmanager"] = "unknown"
+    return found
+
+
+def prometheus_started() -> str | None:
+    try:
+        return prometheus_get("/api/v1/status/runtimeinfo")["data"]["startTime"]
+    except Exception:  # noqa: BLE001 - Prometheus may be down on purpose
+        return None
+
+
 def wait_for(condition, deadline: float, every: float = 5) -> float | None:
     """Poll until `condition()` is true, and return when it became true, or None at the deadline."""
     while time.time() < deadline:
@@ -42,17 +82,22 @@ def wait_for(condition, deadline: float, every: float = 5) -> float | None:
     return None
 
 
-def run_trial(fault: Fault, lab_dir: Path, out: Path, *, receiver_port: int = 8099, keep_lab: bool = False) -> dict:
+def run_trial(
+    fault: Fault, lab_dir: Path, out: Path, *, trial: int = 1, receiver_port: int = 8099, keep_lab: bool = False
+) -> dict:
     result: dict = {
         "fault": fault.id,
+        "trial": trial,
         "number": fault.number,
         "name": fault.name,
         "class": fault.fault_class,
         "chart": lab.CHART_VERSION,
         "blindspot": __version__,
-        "runner": {"python": platform.python_version(), "kernel": platform.release()},
+        "runner": runner_details(),
         "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+    if os.environ.get("GITHUB_RUN_ID"):
+        result.update(run=os.environ["GITHUB_RUN_ID"], commit=os.environ.get("GITHUB_SHA"))
     recorder = Recorder()
     server = recorder.start_receiver(receiver_port) if fault.delivery == "on" else None
     try:
@@ -101,6 +146,9 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
     except Exception:  # noqa: BLE001 - informational only
         result["targets_down_at_t0"] = "unknown"
 
+    result["timings"] = timings()
+    started = prometheus_started()
+
     t0 = time.time()
     try:
         done = inject_all(fault.inject)
@@ -120,6 +168,9 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
             result["harm_after_t0_s"] = round(harm_t - t0)
             log(f"harm confirmed after {result['harm_after_t0_s']}s")
         wait_for(lambda: False, t0 + fault.window_minutes * 60, every=15)
+        now_started = prometheus_started()
+        # Prometheus keeps waiting timers across a restart unless its data was lost, so a restart is noted, not fatal.
+        result["prometheus_restarted"] = None if not (started and now_started) else started != now_started
         result.update(
             status="valid", window_s=fault.window_minutes * 60, **score(fault, recorder.snapshot(), t0, harm_t)
         )

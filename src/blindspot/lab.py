@@ -1,9 +1,12 @@
 """The disposable lab: a kind cluster, the monitoring stack being judged, and the reference workload."""
 
+import base64
 from pathlib import Path
 
+import yaml
+
 from blindspot import guard
-from blindspot.shell import kubectl, run
+from blindspot.shell import kubectl, kubectl_json, run
 
 CLUSTER = "blindspot"
 CHART = "prometheus-community/kube-prometheus-stack"
@@ -61,3 +64,13 @@ def down() -> None:
 def component_gone(name: str) -> bool:
     found = kubectl("-n", NAMESPACE, "get", "pods", "-l", f"app.kubernetes.io/name={name}", "-o", "name", quiet=True)
     return not found.stdout.strip()
+
+
+def alertmanager_route() -> dict:
+    """The top route's waits, from the configuration secret the chart writes."""
+    for item in kubectl_json("-n", NAMESPACE, "get", "secrets")["items"]:
+        data = item.get("data") or {}
+        if "alertmanager.yaml" in data:
+            route = yaml.safe_load(base64.b64decode(data["alertmanager.yaml"])).get("route", {})
+            return {k: route.get(k) for k in ("group_wait", "group_interval", "repeat_interval")}
+    return {"alertmanager": "no configuration secret found"}
