@@ -95,6 +95,7 @@ def watch_prometheus(stop):
                     seen = OBSERVED.setdefault(identity(alert["labels"]), {"labels": alert["labels"]})
                     seen.setdefault(f"{alert['state']}_t", now)
                     seen.setdefault("activeAt", alert.get("activeAt"))
+                    seen["last_seen"] = now
         except Exception:
             pass
         stop.wait(15)
@@ -278,8 +279,20 @@ def score(fault, t0, harm_t):
     with LOCK:
         events = list(EVENTS)
         observed = {k: dict(v) for k, v in OBSERVED.items()}
-    baseline = {k for k, v in observed.items() if min(v.get("pending_t", 1e18), v.get("firing_t", 1e18)) < t0}
-    baseline |= {identity(e["labels"]) for e in events if e["t"] < t0 and e["status"] == "firing"}
+    # Baseline means still active when the fault began, not merely seen while the cluster started up.
+    baseline = {
+        k for k, v in observed.items()
+        if min(v.get("pending_t", 1e18), v.get("firing_t", 1e18)) < t0 and v.get("last_seen", 0) >= t0 - 45
+    }
+    last_status = {}
+    for e in sorted(events, key=lambda e: e["t"]):
+        if e["t"] < t0:
+            last_status[identity(e["labels"])] = e["status"]
+    baseline |= {k for k, status in last_status.items() if status == "firing"}
+    startup = {
+        json.loads(k).get("alertname") for k, v in observed.items()
+        if min(v.get("pending_t", 1e18), v.get("firing_t", 1e18)) < t0
+    }
 
     def credit(labels):
         return is_relevant(fault, labels) and identity(labels) not in baseline
@@ -312,6 +325,7 @@ def score(fault, t0, harm_t):
         "delivered_after_t0": sorted({e["labels"].get("alertname") for e in events if e["t"] >= t0 and e["status"] == "firing"}),
         "firing_after_t0": sorted({v["labels"].get("alertname") for v in observed.values() if v.get("firing_t", 0) >= t0}),
         "baseline_alerts": sorted({json.loads(k).get("alertname") for k in baseline}),
+        "seen_before_t0": sorted(startup),
         "watchdog_last_seen_after_t0_s": round(max(after) - t0) if after else None,
         "watchdog_deliveries_after_t0": len(after),
     }

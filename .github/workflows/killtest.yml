@@ -61,4 +61,4 @@ jobs:
       - name: Summarise
         run: |
           python3 harness/summarize.py results | tee -a "$GITHUB_STEP_SUMMARY"
-          for f in results/*/result.json; do echo "== $f"; cat "$f"; echo; done
+          find results -name result.json -print -exec cat {} \; -exec echo \;
