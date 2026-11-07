@@ -1,0 +1,49 @@
+{
+  "fault": "cpu-throttle",
+  "number": 5,
+  "name": "CPU throttled",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.1.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure"
+  },
+  "started": "2026-11-07T20:35:31Z",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "inject_state": [
+    {
+      "type": "deployment-patch",
+      "state": {}
+    }
+  ],
+  "harm_after_t0_s": 40,
+  "status": "valid",
+  "window_s": 1800,
+  "outcome": "fired, not delivered",
+  "first_relevant_alert": "CPUThrottlingHigh",
+  "seconds_after_harm": 928,
+  "time_band": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [
+    "CPUThrottlingHigh",
+    "InfoInhibitor"
+  ],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeProxyDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 1740,
+  "watchdog_deliveries_after_t0": 15,
+  "undo_errors": [],
+  "recovered_after_undo_s": 0,
+  "run": "https://github.com/aymen-nasri/blindspot/actions/runs/42411772505",
+  "commit": "48050d0"
+}

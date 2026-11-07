@@ -242,3 +242,22 @@ def test_score_summarises_results(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "Caught 1 of 2 valid faults." in out
     assert "Controls passed: 1 of 1." in out
+
+
+# --- Recovery ------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("gone", "probe_failing", "expected"),
+    [(True, True, False), (False, True, False), (True, False, False), (False, False, True)],
+)
+def test_recovery_needs_every_harm_condition_cleared(monkeypatch, gone, probe_failing, expected):
+    from blindspot import runner
+    from blindspot.catalog import Harm
+    from blindspot.measure import Recorder
+
+    monkeypatch.setattr(runner.lab, "component_gone", lambda name: gone)
+    recorder = Recorder()
+    recorder.obs.probes.extend({"t": HARM - 30 + i, "kind": "web", "ok": not probe_failing, "ms": 5} for i in range(10))
+    harm = Harm(probe="web", gone="alertmanager")
+    assert runner.recovered(harm, recorder, HARM) is expected

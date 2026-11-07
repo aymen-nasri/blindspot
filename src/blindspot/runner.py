@@ -26,6 +26,13 @@ def harmed(harm: Harm, recorder: Recorder, at: float) -> bool:
     return harmed_by_probes(recorder.snapshot().probes, harm.probe, at, harm.p95_ms)
 
 
+def recovered(harm: Harm, recorder: Recorder, at: float) -> bool:
+    """Every harm condition has cleared. Not simply `not harmed`, which clears when any one condition does."""
+    if harm.gone and lab.component_gone(harm.gone):
+        return False
+    return harm.probe is None or not harmed_by_probes(recorder.snapshot().probes, harm.probe, at, harm.p95_ms)
+
+
 def wait_for(condition, deadline: float, every: float = 5) -> float | None:
     """Poll until `condition()` is true, and return when it became true, or None at the deadline."""
     while time.time() < deadline:
@@ -120,5 +127,5 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
         undone_at = time.time()
         result["undo_errors"] = undo_all(done)
         if fault.harm:
-            recovered = wait_for(lambda: not harmed(fault.harm, recorder, time.time()), undone_at + RECOVERY_DEADLINE_S)
-            result["recovered_after_undo_s"] = round(recovered - undone_at) if recovered else None
+            back = wait_for(lambda: recovered(fault.harm, recorder, time.time()), undone_at + RECOVERY_DEADLINE_S)
+            result["recovered_after_undo_s"] = round(back - undone_at) if back else None
