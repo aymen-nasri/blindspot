@@ -1,0 +1,28 @@
+# kube-prometheus-stack, as shipped, apart from the changes below. Each one is listed, with its reason,
+# in docs/method-v0.md. RECEIVER_URL is filled in at run time.
+fullnameOverride: kps
+
+# Not judged, and it costs memory on a small runner. It has no part in alerting.
+grafana:
+  enabled: false
+
+alertmanager:
+  config:
+    route:
+      # The chart sends everything to a receiver called "null". Without a real receiver, nothing
+      # could be timed.
+      receiver: blindspot
+      routes:
+        # The chart also sends Watchdog to "null". Sending it out, and repeating it often, makes it a
+        # dead man's switch: when it stops arriving, the monitoring itself has stopped.
+        - receiver: blindspot
+          matchers:
+            - alertname = "Watchdog"
+          group_interval: 1m
+          repeat_interval: 1m
+    receivers:
+      - name: "null"
+      - name: blindspot
+        webhook_configs:
+          - url: RECEIVER_URL
+            send_resolved: true

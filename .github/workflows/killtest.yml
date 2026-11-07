@@ -1,0 +1,64 @@
+name: killtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      faults:
+        description: JSON list of faults to run
+        default: '["crashloop","cpu-throttle","dns-nxdomain","dns-slow","packet-loss","mtu-blackhole","netpol-deny","webhook-down","alertmanager-down","prometheus-down"]'
+
+permissions:
+  contents: read
+
+jobs:
+  trial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        fault: ${{ fromJSON(inputs.faults) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install kind and Helm, checking their checksums
+        run: |
+          curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.33.0/kind-linux-amd64
+          echo "aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d  kind" | sha256sum -c
+          sudo install kind /usr/local/bin/kind
+          curl -fsSLo helm.tgz https://get.helm.sh/helm-v3.22.1-linux-amd64.tar.gz
+          echo "896cf63684a42a723d61c980369d6e588330927deb13676ca0d85006dd6da0ea  helm.tgz" | sha256sum -c
+          tar xzf helm.tgz linux-amd64/helm
+          sudo install linux-amd64/helm /usr/local/bin/helm
+
+      - name: Record the runner
+        run: |
+          nproc; free -g; uname -r
+          cat /proc/sys/kernel/yama/ptrace_scope
+          ls -l /dev/kvm || echo "no /dev/kvm"
+
+      - name: Run one trial
+        working-directory: harness
+        run: python3 trial.py --fault ${{ matrix.fault }} --out "$GITHUB_WORKSPACE/result.json"
+
+      - name: Save the result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: result-${{ matrix.fault }}
+          path: result.json
+          if-no-files-found: warn
+
+  summary:
+    needs: trial
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: results
+      - name: Summarise
+        run: |
+          python3 harness/summarize.py results | tee -a "$GITHUB_STEP_SUMMARY"
+          for f in results/*/result.json; do echo "== $f"; cat "$f"; echo; done

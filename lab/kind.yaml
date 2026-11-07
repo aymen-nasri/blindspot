@@ -1,0 +1,30 @@
+# One control plane and two workers. The web app runs on one worker and its backend on the other, so
+# traffic between them crosses a real route between nodes.
+#
+# The patches make control-plane metrics reachable, because kube-prometheus-stack scrapes them and
+# would otherwise report them down. This is a disclosed change (docs/method-v0.md).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    controllerManager:
+      extraArgs:
+        - name: bind-address
+          value: 0.0.0.0
+    scheduler:
+      extraArgs:
+        - name: bind-address
+          value: 0.0.0.0
+    etcd:
+      local:
+        extraArgs:
+          - name: listen-metrics-urls
+            value: http://0.0.0.0:2381
+  - |
+    kind: KubeProxyConfiguration
+    metricsBindAddress: 0.0.0.0:10249
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
