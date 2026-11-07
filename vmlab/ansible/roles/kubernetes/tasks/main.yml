@@ -1,0 +1,33 @@
+- name: Fetch the Kubernetes package signing key, checking its hash
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_minor }}/deb/Release.key"
+    dest: /etc/apt/keyrings/kubernetes-apt-keyring.asc
+    checksum: "sha256:{{ kubernetes_key_sha256 }}"
+    mode: "0644"
+
+- name: Add the Kubernetes package repository for this minor version only
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: >
+      deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.asc]
+      https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_minor }}/deb/ /
+    mode: "0644"
+
+- name: Install kubelet, kubeadm and kubectl at the pinned version
+  ansible.builtin.apt:
+    name:
+      - "kubelet={{ kubernetes_package }}"
+      - "kubeadm={{ kubernetes_package }}"
+      - "kubectl={{ kubernetes_package }}"
+    update_cache: true
+
+- name: Hold them, so nothing upgrades them during a trial
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: [kubelet, kubeadm, kubectl]
+
+- name: Enable the kubelet. It restarts in a loop until kubeadm configures it, which is expected
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: true

@@ -1,0 +1,67 @@
+name: vmlab
+
+# The VM lab's first test: can three KVM guests become a kubeadm cluster on a free hosted runner?
+# GitHub doesn't officially support nested virtualisation, and jobs land on different hardware, so
+# every job checks for /dev/kvm rather than assuming it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  up:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: What this runner has
+        run: |
+          nproc
+          free -m
+          df -h / /mnt || true
+          ls -l /dev/kvm || echo "no /dev/kvm"
+          grep -Eqw 'vmx|svm' /proc/cpuinfo && echo "CPU virtualisation flags present" || echo "no CPU virtualisation flags"
+
+      - name: Let this job use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install QEMU, libvirt and Ansible
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends qemu-system-x86 qemu-utils libvirt-daemon-system virtinst
+          python3 -m pip install --quiet ansible-core==2.22.0
+
+      - name: Start three VMs
+        run: time vmlab/up.sh
+
+      - name: Build Kubernetes on them with Ansible
+        working-directory: vmlab/ansible
+        run: time ansible-playbook -i ../out/inventory.ini site.yml
+
+      - name: Add pod networking and wait for the nodes
+        run: time vmlab/finish.sh
+
+      - name: Run a pod on each worker
+        env:
+          KUBECONFIG: vmlab/out/kubeconfig
+        run: |
+          for node in blindspot-worker blindspot-worker2; do
+            kubectl run "check-$node" --image=registry.k8s.io/pause:3.10 --restart=Never \
+              --overrides="{\"spec\":{\"nodeName\":\"$node\"}}"
+          done
+          kubectl wait --for=condition=Ready pod --all --timeout=5m
+          kubectl get pods -o wide
+
+      - name: What the lab used
+        if: always()
+        run: |
+          free -m
+          df -h /
+          sudo virsh list --all
+          sudo du -sh /var/lib/libvirt/images/blindspot || true

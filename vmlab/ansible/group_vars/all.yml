@@ -1,0 +1,7 @@
+# Pinned to match the kind lab's node image (kindest/node:v1.37.0), so both labs run the same Kubernetes.
+kubernetes_minor: "1.37"
+kubernetes_version: "1.37.0"
+kubernetes_package: "1.37.0-1.1"
+kubernetes_key_sha256: "7627818cf7bae52f9008c93e8b1f961f53dea11d40891778de216fb1b43be54d"
+pod_subnet: "10.244.0.0/16"
+cluster_name: blindspot
