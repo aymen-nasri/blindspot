@@ -1,0 +1,29 @@
+id: netpol-deny
+number: 14
+name: NetworkPolicy blocks the app
+class: harm
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: apply
+  params:
+    manifest:
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: blindspot-deny
+        namespace: shop
+      spec:
+        podSelector:
+          matchLabels:
+            app: api
+        policyTypes:
+        - Ingress
+harm:
+  probe: web
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+why: A policy change blocks all traffic into the backend. kindnet in kind 0.33.0 enforces network policies.

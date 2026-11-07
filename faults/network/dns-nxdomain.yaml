@@ -1,0 +1,21 @@
+id: dns-nxdomain
+number: 8
+name: Upstream DNS returns NXDOMAIN
+class: harm
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: corefile-block
+  params:
+    block: "example.com:53 {\n    errors\n    template IN ANY example.com {\n        match .*\n        rcode NXDOMAIN\n\
+      \    }\n}\n"
+harm:
+  probe: web
+relevant:
+- alertname: CoreDNS.*|KubeDNS.*
+- alertname: .*
+  labels:
+    job: coredns|kube-dns
+why: An outside name the app depends on stops resolving, while cluster names keep working. Uses CoreDNS's template
+  plugin, because Chaos Mesh's DNS fault returns SERVFAIL or a random address and bypasses CoreDNS.

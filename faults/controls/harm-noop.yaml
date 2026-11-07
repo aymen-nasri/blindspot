@@ -1,0 +1,17 @@
+id: harm-noop
+number: 0
+name: 'Harm control: a fault that does nothing'
+class: control
+runs_on:
+- kind
+window_minutes: 10
+inject:
+- type: noop
+harm:
+  probe: web
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+expect: 'invalid: no harm'
+why: A fault that hurts nothing must be thrown out, never scored.

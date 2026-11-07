@@ -1,0 +1,41 @@
+id: alertmanager-down
+number: 32
+name: Alertmanager down, then the app crashes
+class: monitoring
+runs_on:
+- kind
+window_minutes: 30
+inject:
+- type: scale-cr
+  params:
+    namespace: monitoring
+    kind: alertmanager
+    name: kps-alertmanager
+    replicas: 0
+- type: deployment-patch
+  params:
+    namespace: shop
+    name: web
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: web
+              command:
+              - sh
+              - -c
+              - exit 1
+harm:
+  probe: web
+  gone: alertmanager
+relevant:
+- alertname: Kube(Pod|Deployment|Container|ReplicaSet).*
+  labels:
+    namespace: shop
+- alertname: Alertmanager.*|PrometheusNotConnectedToAlertmanagers|PrometheusErrorSendingAlerts.*
+- alertname: TargetDown
+  labels:
+    job: .*alertmanager.*
+why: Alerts can fire but reach nobody. Scaled through its custom resource, because the Prometheus Operator owns
+  the StatefulSet. Only something outside, such as a dead man's switch on Watchdog, could notice.

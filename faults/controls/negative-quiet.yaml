@@ -1,0 +1,16 @@
+id: negative-quiet
+number: 0
+name: 'Negative control: no fault, nothing caught'
+class: control
+runs_on:
+- kind
+window_minutes: 20
+inject: []
+harm: null
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+expect: not caught
+why: With nothing broken, no alert about the app may earn credit. Runs past 15 minutes, so slow false alarms can
+  show up.
