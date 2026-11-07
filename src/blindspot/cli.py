@@ -6,7 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from blindspot import catalog, guard, lab
+from blindspot import catalog, guard, lab, summary
 from blindspot.runner import run_trial
 
 
@@ -54,33 +54,51 @@ def run_cmd(args) -> int:
         print(f"unknown fault {args.fault!r}. Try: blindspot faults list", file=sys.stderr)
         return 2
     fault = faults[args.fault]
-    result = run_trial(fault, Path(args.lab), Path(args.out) / f"{fault.id}.json", keep_lab=args.keep_lab)
-    if fault.expect and not result.get("control_passed"):
-        print(f"CONTROL FAILED: {fault.id} expected {fault.expect!r}", file=sys.stderr)
-        return 3
-    return 0
+    failed = 0
+    # Each trial gets its own fresh cluster. In CI, each job runs one trial and passes its number with --trial.
+    for trial in range(args.trial, args.trial + args.trials):
+        out = Path(args.out) / f"{fault.id}-{trial}.json"
+        result = run_trial(fault, Path(args.lab), out, trial=trial, keep_lab=args.keep_lab)
+        if fault.expect and not result.get("control_passed"):
+            print(f"CONTROL FAILED: {fault.id} trial {trial} expected {fault.expect!r}", file=sys.stderr)
+            failed += 1
+    return 3 if failed else 0
+
+
+def load_results(directory: Path, catalog_dir: Path | None = None) -> list[dict]:
+    """Every result file under a directory. Old results without a class get it from the catalogue."""
+    known = catalog.load(catalog_dir) if catalog_dir and catalog_dir.is_dir() else {}
+    results = []
+    for path in sorted(directory.rglob("*.json")):
+        result = json.loads(path.read_text())
+        if "fault" not in result:
+            continue
+        if not result.get("class") and result["fault"] in known:
+            result["class"] = known[result["fault"]].fault_class
+        result["_file"] = path.relative_to(directory).as_posix()
+        results.append(result)
+    return results
 
 
 def score_cmd(args) -> int:
-    rows = sorted(
-        (json.loads(p.read_text()) for p in Path(args.results).rglob("*.json")),
-        key=lambda r: (r.get("class") == "control", r.get("number", 0)),
-    )
-    print("| # | Fault | Status | Outcome | First relevant alert | After harm (s) | Band | Recovered (s) |")
+    results = load_results(Path(args.results), Path(args.catalog))
+    results.sort(key=lambda r: (r.get("class") == "control", r.get("number") or 0, r.get("trial", 1)))
+    print("### Every trial\n")
+    print("| # | Fault | Trial | Status | Outcome | First relevant alert | After harm (s) | Recovered (s) |")
     print("|---|---|---|---|---|---|---|---|")
-    for r in rows:
+    for r in results:
+        after, recovered = r.get("seconds_after_harm"), r.get("recovered_after_undo_s")
         print(
-            f"| {r.get('number')} | {r.get('name')} | {r.get('status')} | {r.get('outcome', '')} | "
-            f"{r.get('first_relevant_alert') or ''} | {r.get('seconds_after_harm') or ''} | "
-            f"{r.get('time_band') or ''} | {r.get('recovered_after_undo_s') or ''} |"
+            f"| {r.get('number')} | {r.get('name')} | {r.get('trial', 1)} | {r.get('status')} | "
+            f"{r.get('outcome') or ''} | {r.get('first_relevant_alert') or ''} | "
+            f"{'' if after is None else after} | {'' if recovered is None else recovered} |"
         )
-    real = [r for r in rows if r.get("class") != "control" and r.get("status") == "valid"]
-    caught = [r for r in real if r.get("outcome") == "caught"]
-    controls = [r for r in rows if r.get("class") == "control"]
-    print(f"\nCaught {len(caught)} of {len(real)} valid faults.")
-    if controls:
-        passed = sum(bool(r.get("control_passed")) for r in controls)
-        print(f"Controls passed: {passed} of {len(controls)}.")
+    expected_faults = json.loads(args.expect_faults) if args.expect_faults else None
+    result = summary.summarise(
+        results, min_valid=args.min_valid, expected_trials=args.expect_trials, expected_faults=expected_faults
+    )
+    print("\n### Each fault\n")
+    print(summary.markdown(result))
     return 0
 
 
@@ -101,14 +119,19 @@ def main(argv: list[str] | None = None) -> int:
     lab_parser.add_argument("--receiver-port", type=int, default=8099)
     lab_parser.set_defaults(func=lab_cmd)
 
-    run_parser = sub.add_parser("run", help="run one trial of one fault on a fresh lab")
+    run_parser = sub.add_parser("run", help="run trials of one fault, each on a fresh lab")
     run_parser.add_argument("--fault", required=True)
     run_parser.add_argument("--out", default="results")
+    run_parser.add_argument("--trials", type=int, default=1, help="how many trials to run, one after another")
+    run_parser.add_argument("--trial", type=int, default=1, help="the number of the first trial")
     run_parser.add_argument("--keep-lab", action="store_true", help="leave the cluster running afterwards")
     run_parser.set_defaults(func=run_cmd)
 
-    score_parser = sub.add_parser("score", help="summarise result files")
+    score_parser = sub.add_parser("score", help="summarise result files, one row per fault")
     score_parser.add_argument("results")
+    score_parser.add_argument("--min-valid", type=int, default=summary.MIN_VALID, help="valid trials a fault needs")
+    score_parser.add_argument("--expect-trials", type=int, help="trials planned per fault, to count missing ones")
+    score_parser.add_argument("--expect-faults", help="JSON list of the fault ids planned, to spot absent ones")
     score_parser.set_defaults(func=score_cmd)
 
     args = parser.parse_args(argv)

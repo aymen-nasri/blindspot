@@ -1,25 +1,52 @@
 name: trial
 
-# Runs v0.1 trials: one job and one fresh cluster per fault. Results come back as artifacts and a
-# summary table. Not scheduled while the repo is private, because each trial uses about 40 minutes.
+# Runs trials: one job and one fresh kind cluster for each fault and trial number. Results come back as
+# artifacts and a summary table, and get committed to results/ by hand afterwards.
+# Only people with write access can start it, so trials never run from forks.
 on:
   workflow_dispatch:
     inputs:
       faults:
         description: JSON list of fault ids (see `blindspot faults list`)
         default: '["positive-crashloop","negative-quiet","harm-noop","delivery-off"]'
+      trials:
+        description: Trials per fault, each on its own fresh cluster
+        default: "1"
 
 permissions:
   contents: read
 
 jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      faults: ${{ steps.plan.outputs.faults }}
+      trials: ${{ steps.plan.outputs.trials }}
+    steps:
+      - id: plan
+        name: Check the inputs and list the trials
+        env:
+          FAULTS: ${{ inputs.faults }}
+          TRIALS: ${{ inputs.trials }}
+        run: |
+          echo "$FAULTS" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string" and test("^[a-z0-9-]+$"))' \
+            || { echo "faults must be a JSON list of fault ids"; exit 1; }
+          [[ "$TRIALS" =~ ^[1-9]$|^10$ ]] || { echo "trials must be 1 to 10"; exit 1; }
+          echo "faults=$(echo "$FAULTS" | jq -c .)" >> "$GITHUB_OUTPUT"
+          echo "trials=$(jq -nc --argjson n "$TRIALS" '[range(1; $n + 1)]')" >> "$GITHUB_OUTPUT"
+
   trial:
+    needs: plan
+    name: ${{ matrix.fault }} ${{ matrix.trial }}
     runs-on: ubuntu-24.04
     timeout-minutes: 80
     strategy:
       fail-fast: false
+      max-parallel: 20
       matrix:
-        fault: ${{ fromJSON(inputs.faults) }}
+        fault: ${{ fromJSON(needs.plan.outputs.faults) }}
+        trial: ${{ fromJSON(needs.plan.outputs.trials) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -40,27 +67,33 @@ jobs:
         run: blindspot doctor
 
       - name: Run one trial
-        run: blindspot run --fault ${{ matrix.fault }} --out results
+        env:
+          FAULT: ${{ matrix.fault }}
+          TRIAL: ${{ matrix.trial }}
+        run: blindspot run --fault "$FAULT" --trial "$TRIAL" --out results
 
       - name: Save the result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: result-${{ matrix.fault }}
+          name: result-${{ matrix.fault }}-${{ matrix.trial }}
           path: results/
           if-no-files-found: warn
 
   summary:
-    needs: trial
-    if: always()
+    needs: [plan, trial]
+    if: always() && needs.plan.result == 'success'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: run-results
       - name: Summarise
+        env:
+          FAULTS: ${{ needs.plan.outputs.faults }}
+          TRIALS: ${{ inputs.trials }}
         run: |
           python3 -m pip install --quiet .
-          blindspot score run-results | tee -a "$GITHUB_STEP_SUMMARY"
-          find run-results -name '*.json' -print -exec python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))" {} \;
+          blindspot score run-results --expect-trials "$TRIALS" --expect-faults "$FAULTS" | tee -a "$GITHUB_STEP_SUMMARY"
