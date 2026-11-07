@@ -1,0 +1,33 @@
+{
+  "fault": "mtu-blackhole",
+  "number": 11,
+  "name": "MTU black hole",
+  "chart": "92.22.0",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "inject": {
+    "method": "route MTU 1000 on blindspot-worker2 toward the web pods, with ICMP 'fragmentation needed' dropped"
+  },
+  "status": "valid",
+  "harm_after_t0_s": 15,
+  "window_s": 1800,
+  "outcome": "missed",
+  "first_relevant_alert": null,
+  "seconds_after_harm": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeSchedulerDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 1738,
+  "watchdog_deliveries_after_t0": 15,
+  "run": "https://github.com/aymen-nasri/blindspot/actions/runs/42407891027",
+  "harness_commit": "60a2b1d"
+}

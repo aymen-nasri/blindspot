@@ -215,7 +215,8 @@ def inject(fault):
         patch = [{"op": "replace", "path": "/spec/template/spec/containers/0/command", "value": ["sh", "-c", "exit 1"]}]
         sh(f"kubectl -n shop patch deploy web --type json -p '{json.dumps(patch)}'")
     elif fault == "cpu-throttle":
-        sh("kubectl -n shop set resources deploy/web -c web --limits=cpu=20m")
+        # The request must drop too, because Kubernetes refuses a limit below the request.
+        sh("kubectl -n shop set resources deploy/web -c web --limits=cpu=20m --requests=cpu=10m")
     elif fault == "dns-nxdomain":
         edit_corefile(
             "example.com:53 {\n    errors\n    template IN ANY example.com {\n"
