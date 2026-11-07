@@ -22,7 +22,11 @@ confirmed it really happened before it was scored.
 | 32 | Alertmanager down, then the app crashes | Alerts fired, including `PrometheusNotConnectedToAlertmanagers`, and none could be delivered |
 | 33 | Prometheus down | Nothing fired. The always-on `Watchdog` alert stopped arriving 177 s later, which only an outside dead man's switch would notice |
 
-Raw results, one file per trial: [results/v0.0](results/v0.0). How it was measured: [docs/method-v0.md](docs/method-v0.md).
+A second run, through the v0.1 tool, gave the same outcome for all 10 failures, and all four controls
+below passed. That makes two trials per fault: still too few to call a finding.
+
+Raw results, one file per trial: [results/v0.0](results/v0.0) and [results/v0.1](results/v0.1). How
+it was measured: [docs/method-v0.md](docs/method-v0.md).
 
 **What this does and doesn't show.** One trial per fault, on kind, with a small app. It's a signal that
 default rules miss many infrastructure failures, not a finding about any particular production cluster.
@@ -80,8 +84,8 @@ cluster that matters.**
 ## Status
 
 - **v0.0, done:** the go/no-go test above. Its throwaway harness is kept in [harness/](harness) so its results can be reproduced.
-- **v0.1, in progress:** the tool in [src/blindspot](src/blindspot), with the same faults and scoring as files, a safety guard, undo and controls.
-- **Next:** repeated trials, faults that need real VMs, a quiet test for false alarms, proposed fixes, and a results page.
+- **v0.1, done:** the tool in [src/blindspot](src/blindspot), with the same faults and scoring as files, a safety guard, undo and controls. Every fault was undone cleanly in its run.
+- **Next:** 5 trials per fault, faults that need real VMs, a quiet test for false alarms, proposed fixes, and a results page.
 
 ## AI use
 

@@ -58,9 +58,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          path: results
+          path: run-results
       - name: Summarise
         run: |
           python3 -m pip install --quiet .
-          blindspot score results | tee -a "$GITHUB_STEP_SUMMARY"
-          find results -name '*.json' -print -exec python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))" {} \;
+          blindspot score run-results | tee -a "$GITHUB_STEP_SUMMARY"
+          find run-results -name '*.json' -print -exec python3 -c "import json,sys; print(json.dumps(json.load(open(sys.argv[1]))))" {} \;

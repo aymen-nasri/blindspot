@@ -1,0 +1,57 @@
+{
+  "fault": "alertmanager-down",
+  "number": 32,
+  "name": "Alertmanager down, then the app crashes",
+  "class": "monitoring",
+  "chart": "92.22.0",
+  "blindspot": "0.1.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure"
+  },
+  "started": "2026-11-07T20:35:32Z",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "inject_state": [
+    {
+      "type": "scale-cr",
+      "state": {
+        "previous": 1
+      }
+    },
+    {
+      "type": "deployment-patch",
+      "state": {}
+    }
+  ],
+  "harm_after_t0_s": 47,
+  "status": "valid",
+  "window_s": 1800,
+  "outcome": "fired, not delivered",
+  "first_relevant_alert": "PrometheusNotConnectedToAlertmanagers",
+  "seconds_after_harm": 876,
+  "time_band": null,
+  "delivered_after_t0": [],
+  "firing_after_t0": [
+    "KubeDeploymentReplicasMismatch",
+    "KubeDeploymentRolloutStuck",
+    "KubePodCrashLooping",
+    "KubePodNotReady",
+    "PrometheusNotConnectedToAlertmanagers"
+  ],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": null,
+  "watchdog_deliveries_after_t0": 0,
+  "undo_errors": [],
+  "recovered_after_undo_s": 1,
+  "run": "https://github.com/aymen-nasri/blindspot/actions/runs/42411772505",
+  "commit": "48050d0"
+}
