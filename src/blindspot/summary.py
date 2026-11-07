@@ -60,8 +60,8 @@ def summarise_fault(trials: list[dict], *, min_valid: int = MIN_VALID, expected:
 
 
 def spread(row: dict) -> str:
-    """The outcomes of every trial, in words: "caught 4, missed 1; 1 invalid: no harm"."""
-    parts = [", ".join(f"{outcome} {n}" for outcome, n in row["outcomes"].items())]
+    """The outcomes of every trial, in words: "4 caught; 1 missed; 1 invalid: no harm"."""
+    parts = [f"{n} {outcome}" for outcome, n in row["outcomes"].items()]
     parts += [f"{n} {status}" for status, n in row["invalid"].items()]
     if row["missing"]:
         parts.append(f"{row['missing']} missing")

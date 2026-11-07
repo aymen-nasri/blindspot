@@ -1,4 +1,4 @@
-"""The command line: `blindspot faults list`, `doctor`, `lab up|down`, `run`, `score`."""
+"""The command line: `blindspot faults list`, `doctor`, `lab up|down`, `run`, `score`, `report`."""
 
 import argparse
 import json
@@ -6,7 +6,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from blindspot import catalog, guard, lab, summary
+from blindspot import catalog, guard, lab, report, summary
 from blindspot.runner import run_trial
 
 
@@ -65,23 +65,8 @@ def run_cmd(args) -> int:
     return 3 if failed else 0
 
 
-def load_results(directory: Path, catalog_dir: Path | None = None) -> list[dict]:
-    """Every result file under a directory. Old results without a class get it from the catalogue."""
-    known = catalog.load(catalog_dir) if catalog_dir and catalog_dir.is_dir() else {}
-    results = []
-    for path in sorted(directory.rglob("*.json")):
-        result = json.loads(path.read_text())
-        if "fault" not in result:
-            continue
-        if not result.get("class") and result["fault"] in known:
-            result["class"] = known[result["fault"]].fault_class
-        result["_file"] = path.relative_to(directory).as_posix()
-        results.append(result)
-    return results
-
-
 def score_cmd(args) -> int:
-    results = load_results(Path(args.results), Path(args.catalog))
+    results = report.load_results(Path(args.results), Path(args.catalog))
     results.sort(key=lambda r: (r.get("class") == "control", r.get("number") or 0, r.get("trial", 1)))
     print("### Every trial\n")
     print("| # | Fault | Trial | Status | Outcome | First relevant alert | After harm (s) | Recovered (s) |")
@@ -99,6 +84,18 @@ def score_cmd(args) -> int:
     )
     print("\n### Each fault\n")
     print(summary.markdown(result))
+    return 0
+
+
+def report_cmd(args) -> int:
+    data = report.build(
+        Path(args.results), Path(args.catalog), Path(args.out), repo_url=args.repo_url, commit=args.commit
+    )
+    latest = data["runs"][-1]
+    print(
+        f"wrote {args.out}/index.html from {len(data['runs'])} runs. {latest['name']}: "
+        + summary.headline(latest["summary"])
+    )
     return 0
 
 
@@ -133,6 +130,13 @@ def main(argv: list[str] | None = None) -> int:
     score_parser.add_argument("--expect-trials", type=int, help="trials planned per fault, to count missing ones")
     score_parser.add_argument("--expect-faults", help="JSON list of the fault ids planned, to spot absent ones")
     score_parser.set_defaults(func=score_cmd)
+
+    report_parser = sub.add_parser("report", help="build the static results page from every run under a directory")
+    report_parser.add_argument("results", nargs="?", default="results")
+    report_parser.add_argument("--out", default="site")
+    report_parser.add_argument("--repo-url", default="", help="where raw results are linked, such as the GitHub repo")
+    report_parser.add_argument("--commit", default="", help="the commit the page is built from")
+    report_parser.set_defaults(func=report_cmd)
 
     args = parser.parse_args(argv)
     return args.func(args)

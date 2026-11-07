@@ -1,0 +1,49 @@
+name: pages
+
+# Rebuilds the results page from the result files in Git, and publishes it. The page can only show
+# what's committed under results/, and links every number back to the raw trials.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "results/**"
+      - "faults/**"
+      - "src/blindspot/report.py"
+      - "src/blindspot/summary.py"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build the page
+        run: |
+          python3 -m pip install --quiet .
+          blindspot report results --out site --repo-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" --commit "$GITHUB_SHA"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
