@@ -1,0 +1,34 @@
+{
+  "fault": "packet-loss",
+  "number": 10,
+  "name": "Packet loss between pods",
+  "chart": "92.22.0",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "inject": {
+    "method": "tc netem, 40% loss on the backend pods"
+  },
+  "status": "valid",
+  "harm_after_t0_s": 45,
+  "window_s": 1800,
+  "outcome": "pending only",
+  "first_relevant_alert": "KubePodNotReady",
+  "seconds_after_harm": 303,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "NodeSystemSaturation",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 1739,
+  "watchdog_deliveries_after_t0": 15,
+  "run": "https://github.com/aymen-nasri/blindspot/actions/runs/42407891027",
+  "harness_commit": "60a2b1d"
+}

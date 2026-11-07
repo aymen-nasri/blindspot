@@ -1,0 +1,42 @@
+{
+  "fault": "crashloop",
+  "number": 1,
+  "name": "App keeps crashing",
+  "chart": "92.22.0",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "inject": {},
+  "status": "valid",
+  "harm_after_t0_s": 45,
+  "window_s": 1800,
+  "outcome": "caught",
+  "first_relevant_alert": "KubePodCrashLooping",
+  "seconds_after_harm": 925,
+  "delivered_after_t0": [
+    "KubeDeploymentReplicasMismatch",
+    "KubeDeploymentRolloutStuck",
+    "KubePodCrashLooping",
+    "KubePodNotReady",
+    "Watchdog"
+  ],
+  "firing_after_t0": [
+    "KubeDeploymentReplicasMismatch",
+    "KubeDeploymentRolloutStuck",
+    "KubePodCrashLooping",
+    "KubePodNotReady"
+  ],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "NodeSystemSaturation",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 1739,
+  "watchdog_deliveries_after_t0": 15,
+  "run": "https://github.com/aymen-nasri/blindspot/actions/runs/42407891027",
+  "harness_commit": "60a2b1d"
+}
