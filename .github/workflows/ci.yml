@@ -24,3 +24,5 @@ jobs:
         run: python3 -m pytest -q
       - name: Fault files load
         run: blindspot faults list
+      - name: Results page builds
+        run: blindspot report results --out site

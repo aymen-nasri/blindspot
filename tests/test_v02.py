@@ -26,13 +26,13 @@ def row(*trials, **kwargs):
 
 def test_five_agreeing_trials_are_stable():
     r = row(*(trial(n=i) for i in range(1, 6)))
-    assert (r["outcome"], r["stable"], r["valid"], r["spread"]) == ("missed", True, 5, "missed 5")
+    assert (r["outcome"], r["stable"], r["valid"], r["spread"]) == ("missed", True, 5, "5 missed")
 
 
 def test_a_strict_majority_wins_and_is_marked_unstable():
     r = row(*(trial(n=i, outcome="caught", seconds=900) for i in range(3)), trial(n=4), trial(n=5))
     assert (r["outcome"], r["stable"]) == ("caught", False)
-    assert r["spread"] == "caught 3, missed 2"
+    assert r["spread"] == "3 caught; 2 missed"
 
 
 def test_a_tie_is_mixed_and_never_rounds_up_to_caught():
@@ -52,7 +52,7 @@ def test_fewer_than_three_valid_trials_is_not_enough_data():
     r = row(*trials)
     assert r["outcome"] == "not enough data"
     assert r["invalid"] == {"invalid: no harm": 1, "invalid: setup": 1}
-    assert r["spread"] == "missed 2; 1 invalid: no harm; 1 invalid: setup"
+    assert r["spread"] == "2 missed; 1 invalid: no harm; 1 invalid: setup"
 
 
 def test_missing_trials_are_counted_against_the_plan():
@@ -166,3 +166,19 @@ def test_run_writes_one_file_per_trial_number(monkeypatch, tmp_path):
     args = ["--catalog", str(root / "faults"), "run", "--fault", "crashloop", "--trial", "3", "--trials", "2"]
     assert cli.main([*args, "--out", str(tmp_path)]) == 0
     assert seen == [("crashloop-3.json", 3), ("crashloop-4.json", 4)]
+
+
+def test_the_page_reads_old_one_trial_runs_by_their_own_plan(tmp_path):
+    """v0.0 retried one fault, so it has two files for it. It's still a one-trial run, read as one."""
+    from pathlib import Path
+
+    from blindspot import report
+
+    root = Path(__file__).resolve().parents[1]
+    data = report.build(root / "results", root / "faults", tmp_path, repo_url="https://example.invalid/r")
+    v0 = next(run for run in data["runs"] if run["name"] == "v0.0")
+    assert v0["trials_per_fault"] == 1
+    assert summary.headline(v0["summary"]).startswith("Caught 1 of 10 faults")
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert "https://example.invalid/r/blob/main/results/" in page
+    assert "<script>alert" not in page
