@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 498" width="900" height="498" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Default alerts caught 7 of 18 real Kubernetes failures (5 trials each, a fresh cluster every trial)">
+  <rect width="900" height="498" rx="10" fill="#0d1117"/>
+  <text x="24" y="40" font-size="17" font-weight="700" fill="#e6edf3">Default alerts caught 7 of 18 real Kubernetes failures (5 trials each, a fresh cluster every trial)</text>
+  <rect x="24" y="57" width="14" height="14" rx="3" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="44" y="68" font-size="12.5" fill="#9aa5b5">Caught: an alert was delivered</text>
+  <rect x="264.0" y="57" width="14" height="14" rx="3" fill="#3a2710" stroke="#f0a650" stroke-width="1.5"/>
+  <text x="284.0" y="68" font-size="12.5" fill="#9aa5b5">Fired, reached nobody</text>
+  <rect x="444.6" y="57" width="14" height="14" rx="3" fill="#332c10" stroke="#dcc25c" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="464.6" y="68" font-size="12.5" fill="#9aa5b5">Started waiting, never fired</text>
+  <rect x="671.4" y="57" width="14" height="14" rx="3" fill="#0d1117" stroke="#ff7d72" stroke-width="1.5"/>
+  <text x="691.4" y="68" font-size="12.5" fill="#9aa5b5">Missed: nothing happened</text>
+  <text x="24" y="90" font-size="12.5" fill="#8ea8ff" font-weight="600">FIXED: caught in at least 4 of 5 trials once BlindSpot’s 5 proposed rules were added</text>
+  <text x="24" y="130" font-size="14" font-weight="700" fill="#e6edf3">Common app failures</text>
+  <text x="876" y="130" font-size="13" text-anchor="end" fill="#9aa5b5">kind · 3 of 3 caught</text>
+  <rect x="24" y="140" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="34" y="161" font-size="13" font-weight="600" fill="#e6edf3">Out of memory</text>
+  <text x="34" y="182" font-size="12" font-weight="600" fill="#52c58d">Caught, ~16 min</text>
+  <rect x="196" y="140" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="206" y="161" font-size="13" font-weight="600" fill="#e6edf3">Bad image in a rollout</text>
+  <text x="206" y="182" font-size="12" font-weight="600" fill="#52c58d">Caught, ~16 min</text>
+  <rect x="368" y="140" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="378" y="161" font-size="13" font-weight="600" fill="#e6edf3">All replicas unready</text>
+  <text x="378" y="182" font-size="12" font-weight="600" fill="#52c58d">Caught, ~16 min</text>
+  <text x="24" y="234" font-size="14" font-weight="700" fill="#e6edf3">Harder infrastructure failures</text>
+  <text x="876" y="234" font-size="13" text-anchor="end" fill="#9aa5b5">kind · 1 of 10 caught</text>
+  <rect x="24" y="244" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="34" y="265" font-size="13" font-weight="600" fill="#e6edf3">App keeps crashing</text>
+  <text x="34" y="286" font-size="12" font-weight="600" fill="#52c58d">Caught, ~16 min</text>
+  <rect x="196" y="244" width="164" height="58" rx="6" fill="#3a2710" stroke="#f0a650" stroke-width="1.5"/>
+  <text x="206" y="265" font-size="13" font-weight="600" fill="#e6edf3">CPU throttled</text>
+  <text x="206" y="286" font-size="12" font-weight="600" fill="#f0a650">Fired, muted</text>
+  <text x="350" y="286" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="368" y="244" width="164" height="58" rx="6" fill="#0d1117" stroke="#ff7d72" stroke-width="1.5"/>
+  <text x="378" y="265" font-size="13" font-weight="600" fill="#e6edf3">DNS returns NXDOMAIN</text>
+  <text x="378" y="286" font-size="12" font-weight="600" fill="#ff7d72">Missed</text>
+  <text x="522" y="286" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="540" y="244" width="164" height="58" rx="6" fill="#0d1117" stroke="#ff7d72" stroke-width="1.5"/>
+  <text x="550" y="265" font-size="13" font-weight="600" fill="#e6edf3">DNS very slow</text>
+  <text x="550" y="286" font-size="12" font-weight="600" fill="#ff7d72">Missed</text>
+  <text x="694" y="286" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="712" y="244" width="164" height="58" rx="6" fill="#332c10" stroke="#dcc25c" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="722" y="265" font-size="13" font-weight="600" fill="#e6edf3">40% packet loss</text>
+  <text x="722" y="286" font-size="12" font-weight="600" fill="#dcc25c">Waited, never fired</text>
+  <text x="866" y="286" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="24" y="310" width="164" height="58" rx="6" fill="#0d1117" stroke="#ff7d72" stroke-width="1.5"/>
+  <text x="34" y="331" font-size="13" font-weight="600" fill="#e6edf3">MTU black hole</text>
+  <text x="34" y="352" font-size="12" font-weight="600" fill="#ff7d72">Missed</text>
+  <text x="178" y="352" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="196" y="310" width="164" height="58" rx="6" fill="#0d1117" stroke="#ff7d72" stroke-width="1.5"/>
+  <text x="206" y="331" font-size="13" font-weight="600" fill="#e6edf3">NetworkPolicy block</text>
+  <text x="206" y="352" font-size="12" font-weight="600" fill="#ff7d72">Missed</text>
+  <text x="350" y="352" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="368" y="310" width="164" height="58" rx="6" fill="#332c10" stroke="#dcc25c" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="378" y="331" font-size="13" font-weight="600" fill="#e6edf3">Admission webhook</text>
+  <text x="378" y="352" font-size="12" font-weight="600" fill="#dcc25c">Waited, never fired</text>
+  <text x="522" y="352" font-size="10.5" font-weight="700" text-anchor="end" fill="#8ea8ff">FIXED</text>
+  <rect x="540" y="310" width="164" height="58" rx="6" fill="#3a2710" stroke="#f0a650" stroke-width="1.5"/>
+  <text x="550" y="331" font-size="13" font-weight="600" fill="#e6edf3">Alertmanager down</text>
+  <text x="550" y="352" font-size="12" font-weight="600" fill="#f0a650">Fired, reached nobody</text>
+  <rect x="712" y="310" width="164" height="58" rx="6" fill="#0d1117" stroke="#ff7d72" stroke-width="1.5"/>
+  <text x="722" y="331" font-size="13" font-weight="600" fill="#e6edf3">Prometheus down</text>
+  <text x="722" y="352" font-size="12" font-weight="600" fill="#ff7d72">Missed</text>
+  <text x="24" y="404" font-size="14" font-weight="700" fill="#e6edf3">Node failures on real VMs</text>
+  <text x="876" y="404" font-size="13" text-anchor="end" fill="#9aa5b5">3 KVM VMs · 3 of 5 caught</text>
+  <rect x="24" y="414" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="34" y="435" font-size="13" font-weight="600" fill="#e6edf3">Node disk full</text>
+  <text x="34" y="456" font-size="12" font-weight="600" fill="#52c58d">Caught, ~16 min</text>
+  <rect x="196" y="414" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="206" y="435" font-size="13" font-weight="600" fill="#e6edf3">Node out of inodes</text>
+  <text x="206" y="456" font-size="12" font-weight="600" fill="#52c58d">Caught, ~16 min</text>
+  <rect x="368" y="414" width="164" height="58" rx="6" fill="#332c10" stroke="#dcc25c" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="378" y="435" font-size="13" font-weight="600" fill="#e6edf3">Node memory pressure</text>
+  <text x="378" y="456" font-size="12" font-weight="600" fill="#dcc25c">Waited, never fired</text>
+  <rect x="540" y="414" width="164" height="58" rx="6" fill="#14301f" stroke="#52c58d" stroke-width="1.5"/>
+  <text x="550" y="435" font-size="13" font-weight="600" fill="#e6edf3">Kubelet stopped</text>
+  <text x="550" y="456" font-size="12" font-weight="600" fill="#52c58d">Caught, ~10 min</text>
+  <rect x="712" y="414" width="164" height="58" rx="6" fill="#3a2710" stroke="#f0a650" stroke-width="1.5"/>
+  <text x="722" y="435" font-size="13" font-weight="600" fill="#e6edf3">containerd, then a crash</text>
+  <text x="722" y="456" font-size="12" font-weight="600" fill="#f0a650">Fired, reached nobody</text>
+</svg>

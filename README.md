@@ -5,18 +5,20 @@
 ### Breaks a test Kubernetes cluster in real ways, and measures which failures the monitoring actually tells someone about
 
 [![CI](https://github.com/aymen-nasri/blindspot/actions/workflows/ci.yml/badge.svg)](https://github.com/aymen-nasri/blindspot/actions/workflows/ci.yml)
-![Status](https://img.shields.io/badge/status-active%20development-orange)
-![Result](https://img.shields.io/badge/defaults%20caught-1%20of%2010%20hard%20faults-B0281F)
+[![Security](https://github.com/aymen-nasri/blindspot/actions/workflows/security.yml/badge.svg)](https://github.com/aymen-nasri/blindspot/actions/workflows/security.yml)
+[![CodeQL](https://github.com/aymen-nasri/blindspot/actions/workflows/codeql.yml/badge.svg)](https://github.com/aymen-nasri/blindspot/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/aymen-nasri/blindspot?label=signed%20release&color=2E7D32)](https://github.com/aymen-nasri/blindspot/releases/latest)
+![Result](https://img.shields.io/badge/default%20alerts%20caught-7%20of%2018%20failures-B0281F)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.37%20%C2%B7%20kind%20%C2%B7%20kubeadm-326CE5?logo=kubernetes&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-Alertmanager%20%C2%B7%20PromQL-E6522C?logo=prometheus&logoColor=white)
 ![VM lab](https://img.shields.io/badge/VM%20lab-QEMU%2FKVM%20%C2%B7%20cloud--init%20%C2%B7%20Ansible-EE0000?logo=ansible&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12%20%C2%B7%20Pydantic%20%C2%B7%20pytest-3776AB?logo=python&logoColor=white)
-![CI/CD](https://img.shields.io/badge/GitHub%20Actions-70--job%20matrix%20%C2%B7%20Pages-2088FF?logo=githubactions&logoColor=white)
+![CI/CD](https://img.shields.io/badge/GitHub%20Actions-fault%20%C3%97%20trial%20matrix%20%C2%B7%20Pages-2088FF?logo=githubactions&logoColor=white)
 ![Rules](https://img.shields.io/badge/rules-promtool%20%C2%B7%20pint%20%C2%B7%20blackbox--exporter-E6522C)
 ![DevSecOps](https://img.shields.io/badge/DevSecOps-Gitleaks%20%C2%B7%20Trivy%20%C2%B7%20CodeQL%20%C2%B7%20Cosign-2E7D32)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
-**[Results page](https://aymen-nasri.github.io/blindspot/)** · [Raw results](results) · [Method](docs/method-v0.2.md) · [Design decisions](docs/decisions)
+**[Results page](https://aymen-nasri.github.io/blindspot/)** · [Signed release](https://github.com/aymen-nasri/blindspot/releases/latest) · [Raw results](results) · [Method](docs/method-v0.5.md) · [Design decisions](docs/decisions)
 
 </div>
 
@@ -24,18 +26,40 @@ Most teams install kube-prometheus-stack and trust its default alerts to tell th
 BlindSpot tests that. Each trial builds a fresh cluster, breaks one thing, proves from outside the
 cluster that users were really hurt, and records whether an alert actually reached someone.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/results-dark.svg">
+  <img alt="Default alerts caught 7 of 18 real Kubernetes failures: all 3 common app failures, 1 of 10 harder infrastructure failures, 3 of 5 node failures on real VMs. Seven of the misses were fixed by BlindSpot's 5 proposed rules." src="docs/assets/results-light.svg">
+</picture>
+
+## The 30-second version
+
+- **The question.** When something real breaks in Kubernetes, does the default monitoring actually tell a person?
+- **What it found.** kube-prometheus-stack 92.22.0's default rules delivered an alert for **7 of 18** failures:
+  every common app failure, but only **1 of 10** harder infrastructure failures and **3 of 5** node failures
+  on real VMs. Most of the catches took **about 16 minutes**.
+- **The surprise.** Whenever a node failure hit the node Alertmanager ran on, **nothing was delivered at
+  all**, not even the always-on Watchdog alert: **0 of 6** trials, against 4 of 4 when it ran elsewhere
+  ([why](docs/investigations/kubelet-placement.md)).
+- **The fix.** Five Prometheus rules and a synthetic probe, each unit-tested with `promtool`, caught **all 7**
+  failures they target, in **3 to 16 minutes**, with **no false alarms** in five hours of normal work.
+- **Why you can trust it.** 235 trials, each on a fresh cluster. Four controls test the tool itself on
+  every lab, and all 50 control trials passed. Scoring rules were committed before every run, every raw
+  result is in Git, and the release is signed with Cosign, with an SBOM.
+
+<sub>The figure is drawn from the committed results by [`scripts/readme_figure.py`](scripts/readme_figure.py), not by hand.</sub>
+
 ## At a glance
 
 | | |
 |---|---|
 | **What it does** | Injects one real failure at a time into a disposable Kubernetes cluster, confirms the harm with probes outside the cluster, and records whether the monitoring delivered an alert, fired one that reached nobody, only started waiting, or did nothing |
-| **What it found** | kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, **3 of 5 node failures on real VMs**, but **1 of 10 harder infrastructure failures**, mostly after about 16 minutes. Whenever a node failure hit the node Alertmanager ran on, alerts fired and reached nobody: 6 of 6 such trials |
 | **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · blackbox-exporter · promtool · pint · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages · Gitleaks · Trivy · CodeQL · Cosign |
 | **Evidence it works** | 235 trials with raw results in Git, 4 controls that test the tool itself on each lab (all 50 control trials passed), 152 unit tests, proposed rules checked by `promtool` and `pint` in CI, and scoring rules committed before each run |
 | **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 5 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. Released as [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), signed with Cosign, with an SBOM. Nothing has run on a production cluster, and it must not |
 
 ## Table of contents
 
+- [The 30-second version](#the-30-second-version)
 - [The result](#the-result)
 - [Build status](#build-status)
 - [Where to look, by role](#where-to-look-by-role)
@@ -49,7 +73,6 @@ cluster that users were really hurt, and records whether an alert actually reach
 - [Safety](#safety)
 - [Repository layout](#repository-layout)
 - [Roadmap](#roadmap)
-- [AI use](#ai-use)
 
 ## The result
 
@@ -58,6 +81,11 @@ node failures on real VMs**, and **1 of 10 harder infrastructure failures**: 7 o
 fault ran 5 times, each time on a fresh cluster, and checks outside the cluster confirmed the harm
 before a trial was scored. All 50 control trials passed: 20 on kind, 20 on the VMs and 10 under the
 proposed fixes.
+
+The [results page](https://aymen-nasri.github.io/blindspot/) is rebuilt from `results/` on every change.
+It shows every fault, all five trials, the run each row came from, and a link to each raw trial:
+
+<a href="https://aymen-nasri.github.io/blindspot/"><img alt="The BlindSpot results page: default monitoring caught 7 of 18 real Kubernetes failures, after a median of about 16 minutes" src="docs/assets/results-page.png" width="820"></a>
 
 **Common app failures** ([results/v0.4](results/v0.4), the failures the defaults are built for):
 
@@ -134,14 +162,14 @@ So fault 5's row reads "throttling went unreported", not "users were hurt and no
 
 ## Build status
 
-| Area | ✅ Built and measured | 🧪 Built, results pending | 📐 Planned |
-|---|---|---|---|
-| **Faults** | 10 faults and 3 common app faults on kind, and 5 node faults on real VMs, 5 trials each | — | The rest of the spec's 34: clock skew, conntrack, etcd, the scheduler and more |
-| **Measurement** | Outside probes, alert receiver, Prometheus watcher read through the API server, minute-by-minute harm timeline, and a quiet test for false alarms (no false alarm in 5 hours) | — | — |
-| **Labs** | kind 0.33.0, and a three-node VM lab on free runners. All four controls pass on both | — | — |
-| **Monitoring compared** | kube-prometheus-stack defaults, and the defaults plus BlindSpot's proposed fixes (Profile C) | — | awesome-prometheus-alerts as another setup |
-| **Fixes** | Five rules and synthetic probes, each passing all four gates: `promtool` and `pint`, a unit test, catching its fault in at least 4 of 5 trials, and a silent quiet test. Each has a runbook | — | Spreading Alertmanager across nodes, tested the same way. Sending findings to the rules' maintainers |
-| **Delivery** | CI on every push, a 70-job trial matrix, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages, Gitleaks, Trivy, CodeQL, Dependabot, a weekly regression that opens an issue on change, and [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), released with an SBOM and every file signed with Cosign keyless | — | — |
+| Area | ✅ Built and measured | 📐 Planned |
+|---|---|---|
+| **Faults** | 10 faults and 3 common app faults on kind, and 5 node faults on real VMs, 5 trials each | The rest of the spec's 34: clock skew, conntrack, etcd, the scheduler and more |
+| **Measurement** | Outside probes, alert receiver, Prometheus watcher read through the API server, minute-by-minute harm timeline, and a quiet test for false alarms (no false alarm in 10 hours, across both setups) | — |
+| **Labs** | kind 0.33.0, and a three-node VM lab on free runners. All four controls pass on both | — |
+| **Monitoring compared** | kube-prometheus-stack defaults, and the defaults plus BlindSpot's proposed fixes (Profile C) | awesome-prometheus-alerts as another setup |
+| **Fixes** | Five rules and synthetic probes, each passing all four gates: `promtool` and `pint`, a unit test, catching its fault in at least 4 of 5 trials, and a silent quiet test. Each has a runbook | Spreading Alertmanager across nodes, tested the same way. Sending findings to the rules' maintainers |
+| **Delivery** | CI on every push, a fault × trial matrix of fresh clusters, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages, Gitleaks, Trivy, CodeQL, Dependabot, a weekly regression that opens an issue on change, and [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), released with an SBOM and every file signed with Cosign keyless | — |
 
 ## Where to look, by role
 
@@ -300,8 +328,8 @@ same monitoring run unchanged on both labs. All four controls passed on it, in 5
 ## Method and fairness
 
 Each version's rules were committed before its trials ran: [one trial](docs/method-v0.md),
-[five trials into one row](docs/method-v0.2.md), [node faults](docs/method-v0.3.md) and
-[common app faults](docs/method-v0.4.md). A rule found wrong after results exist is fixed in its own
+[five trials into one row](docs/method-v0.2.md), [node faults](docs/method-v0.3.md),
+[common app faults and the quiet test](docs/method-v0.4.md) and [the proposed fixes](docs/method-v0.5.md). A rule found wrong after results exist is fixed in its own
 commit, saying why. Why it's built this way: [docs/decisions](docs/decisions).
 
 - **A fault only counts if it hurt.** Probes outside the cluster must see over 5% failures, or slow
@@ -356,7 +384,8 @@ rules/              Profile C's proposed rules, and their promtool unit tests
 lab/                the kind cluster, the monitoring values, and the reference app
 vmlab/              the VM lab: up.sh, Ansible roles, finish.sh
 results/            raw results, one JSON file per trial, by version
-docs/               method for each version, design decisions, runbooks, investigations
+docs/               method for each version, design decisions, runbooks, investigations, release notes
+scripts/           the README figure, drawn from results/
 tests/              152 tests that need no cluster
 harness/            the throwaway v0.0 harness, kept so its results can be reproduced
 .github/workflows/  CI, trials, the VM lab and the results page
@@ -382,8 +411,6 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
 - **v1.0:** [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0) is the first signed
   release, with an SBOM; its notes show how to verify a file. Still to do: a demo, instructions someone
   else can follow to run one fault, and testing Alertmanager spread across nodes.
-
-
 
 ## License
 
