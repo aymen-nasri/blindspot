@@ -16,7 +16,7 @@ from the raw results in [results/v0.2](results/v0.2).
 | # | Failure | What the monitoring did, in 5 of 5 trials |
 |---|---|---|
 | 1 | App keeps crashing | **Caught.** `KubePodCrashLooping` delivered 942 to 956 s after the app went down |
-| 5 | CPU throttled | Fired `CPUThrottlingHigh` after 918 to 943 s, but it has `info` severity, and `InfoInhibitor` muted it. Nobody was told. [See the note below](#an-open-question-about-the-cpu-fault) |
+| 5 | CPU throttled | Fired `CPUThrottlingHigh` after 918 to 943 s, but it has `info` severity, and `InfoInhibitor` muted it. Nobody was told. [What this row means](#what-the-cpu-faults-row-means) |
 | 8 | Upstream DNS returns NXDOMAIN | Nothing fired |
 | 9 | DNS very slow | Nothing fired |
 | 10 | 40% packet loss into a backend | `KubePodNotReady` started waiting, after 7 to 583 s, and never fired within 30 minutes |
@@ -44,18 +44,17 @@ rules wait 15 minutes before firing by design, and the scoring counts those as c
 was caught after about 16 minutes, as designed. The chart sends alerts to a receiver called `null` by
 default, so a real team would also have to configure delivery. This lab did that.
 
-### An open question about the CPU fault
+### What the CPU fault's row means
 
-Harm is confirmed once, near the start of each trial. For the CPU fault, the probes confirmed it about
-40 s in, but in all five v0.2 trials, and in v0.1, they no longer met the harm threshold (latency over
-1.5 s, or over 5% failures) by the end of the 30-minute window. Applying the CPU limit replaces the web
-pods, and the web Deployment uses `Recreate`, so part of the early harm may be that restart rather than
-throttling. `CPUThrottlingHigh` fired every time, so the throttling was real. Whether users were still
-hurt later is open.
+Harm is confirmed once, near the start of each trial. For the CPU fault, it was confirmed about 40 s in,
+but by the end of the window the probes no longer met the harm threshold. A rerun that recorded every
+probe minute by minute ([docs/investigations/cpu-throttle.md](docs/investigations/cpu-throttle.md))
+showed why: the harm that made those trials valid was the web pods restarting in the first minute, when
+the new limit replaced them. After that, throttling made the app 15 to 100 times slower for the whole
+window, but never past the 1.5 s threshold set before the run.
 
-Results now record how every probe did, minute by minute, and a rerun of this fault is under way. Until
-it settles the question, treat fault 5's row as "throttling went unreported", not "users were hurt and
-nobody was told".
+So fault 5's row reads "throttling went unreported", not "users were hurt and nobody was told".
+`CPUThrottlingHigh` fired every time and was muted every time.
 
 ## How a trial works
 
