@@ -1,0 +1,63 @@
+{
+  "fault": "netpol-deny",
+  "trial": 3,
+  "number": 14,
+  "name": "NetworkPolicy blocks the app",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-07T23:22:45Z",
+  "run": "42421927259",
+  "commit": "eff1f34e4c776557ca677752da4da370e81ffcff",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "inject_state": [
+    {
+      "type": "apply",
+      "state": {}
+    }
+  ],
+  "harm_after_t0_s": 15,
+  "prometheus_restarted": false,
+  "status": "valid",
+  "window_s": 1800,
+  "outcome": "missed",
+  "first_relevant_alert": null,
+  "seconds_after_harm": null,
+  "time_band": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeProxyDown",
+    "KubeSchedulerDown",
+    "KubeletDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 1739,
+  "watchdog_deliveries_after_t0": 15,
+  "undo_errors": [],
+  "recovered_after_undo_s": 50
+}
