@@ -32,7 +32,7 @@ cluster that users were really hurt, and records whether an alert actually reach
 | **What it found** | kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, **3 of 5 node failures on real VMs**, but **1 of 10 harder infrastructure failures**, mostly after about 16 minutes. Whenever a node failure hit the node Alertmanager ran on, alerts fired and reached nobody: 6 of 6 such trials |
 | **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · blackbox-exporter · promtool · pint · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages · Gitleaks · Trivy · CodeQL · Cosign |
 | **Evidence it works** | 235 trials with raw results in Git, 4 controls that test the tool itself on each lab (all 50 control trials passed), 152 unit tests, proposed rules checked by `promtool` and `pint` in CI, and scoring rules committed before each run |
-| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 5 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. A signed v0.5.0 release is prepared, not yet published. Nothing has run on a production cluster, and it must not |
+| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 5 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. Released as [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), signed with Cosign, with an SBOM. Nothing has run on a production cluster, and it must not |
 
 ## Table of contents
 
@@ -141,7 +141,7 @@ So fault 5's row reads "throttling went unreported", not "users were hurt and no
 | **Labs** | kind 0.33.0, and a three-node VM lab on free runners. All four controls pass on both | — | — |
 | **Monitoring compared** | kube-prometheus-stack defaults, and the defaults plus BlindSpot's proposed fixes (Profile C) | — | awesome-prometheus-alerts as another setup |
 | **Fixes** | Five rules and synthetic probes, each passing all four gates: `promtool` and `pint`, a unit test, catching its fault in at least 4 of 5 trials, and a silent quiet test. Each has a runbook | — | Spreading Alertmanager across nodes, tested the same way. Sending findings to the rules' maintainers |
-| **Delivery** | CI on every push, a 70-job trial matrix, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages, Gitleaks, Trivy, CodeQL, Dependabot, a weekly regression that opens an issue on change, and a release workflow that signs with Cosign | — | A first signed release, once v0.5's results are in |
+| **Delivery** | CI on every push, a 70-job trial matrix, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages, Gitleaks, Trivy, CodeQL, Dependabot, a weekly regression that opens an issue on change, and [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), released with an SBOM and every file signed with Cosign keyless | — | — |
 
 ## Where to look, by role
 
@@ -379,9 +379,9 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
 - **v0.5, done:** five proposed rules and synthetic probes, each passing all four gates, with runbooks.
   Together they catch the 7 faults the defaults missed, after 3 to 16 minutes, with no false alarm in
   the quiet test ([method and results](docs/method-v0.5.md)).
-- **v1.0:** v0.5.0, the first signed release with an SBOM, is prepared and not yet published. Still to
-  do: a demo, instructions someone else can follow to run one fault, and testing Alertmanager spread
-  across nodes.
+- **v1.0:** [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0) is the first signed
+  release, with an SBOM; its notes show how to verify a file. Still to do: a demo, instructions someone
+  else can follow to run one fault, and testing Alertmanager spread across nodes.
 
 ## AI use
 
