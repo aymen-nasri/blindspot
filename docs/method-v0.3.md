@@ -59,6 +59,36 @@ The kubelet-stopped smoke trial was valid but scored missed, with no deliveries 
 Watchdog. Because of the watcher problem, its pending and firing states weren't trustworthy, so it's
 rerun with the rest. No rule for judging outcomes changed.
 
+## Changes after the full run, before the rerun
+
+The full run (42626043262) found two faults that did no harm in any of their five trials, so those
+trials are invalid and the faults have no result. These changes were made after seeing that, and before
+any rerun, and they're written here first. Both faults rerun five times into `results/v0.3.1`. No rule
+for judging outcomes changed, and the three faults that did harm aren't rerun.
+
+| Fault | What the full run showed | Change |
+|---|---|---|
+| Memory pressure | No harm, and no memory alert even started its wait, so memory was never more than 90% used when Prometheus looked. The likely cause: `stress-ng` makes its own workers the OOM killer's first choice and restarts them when killed, which undoes `OOMScoreAdjust=-1000` | `stress-ng` runs with `--no-oom-adjust`. The trial now records free memory and the kernel's OOM kill count before injecting and 30 seconds after, so a trial without harm shows whether the pressure was really there |
+| containerd stopped, then a rollout | No harm. `Recreate` deletes the old pods first, but with containerd down the kubelet can't stop them, so they keep running. Their endpoints are marked terminating but still serving, and kube-proxy keeps sending traffic to serving endpoints when no ready ones are left. The new pods are never created, because `Recreate` waits for the old ones to go | The fault becomes "containerd stopped, then the app crashes": with containerd stopped, the web app's container processes are killed through their cgroups. Nothing can restart them until containerd is back |
+| Undo of the rollout | `kubectl rollout undo` failed in all five trials with "no rollout history found", because the stuck rollout never made a second revision. Each trial's lab is thrown away, so no later trial was affected | Every `deployment-patch` step now saves the pod template before patching and puts it back on undo, for every fault that uses it |
+
+What the full run did show is kept as a finding: stopping containerd alone, even with a rollout started
+during the outage, didn't hurt an app whose pods were already running.
+
+A trial that ends with no harm now also records its minute-by-minute probe timeline.
+
+### A second change to memory pressure, after its rerun
+
+The rerun (42652063472) still did no harm in any of five trials, and the new readings showed the pressure was never there. Free
+memory fell from about 3.1 to 3.3 GB to about 1.7 to 2.2 GB in the first 30 seconds, with no OOM kills. The likely reason:
+`stress-ng` sizes a percentage from memory that's free right now, leaving out the page cache the
+kernel can hand back, so "100%" never got near full.
+
+Change: the size is now read from the node's `MemAvailable`, which includes that cache, and passed to
+`stress-ng` in KiB. Memory pressure reruns five times into `results/v0.3.2`. This is the last change to
+this fault for v0.3: if it still does no harm, its result stays "not enough data" and the README says
+so.
+
 ## Controls
 
 The four controls run on the VM lab too, five times each. Every control trial on a lab must pass, or
@@ -73,7 +103,7 @@ that lab's results aren't trusted.
 ## The headline
 
 Each fault's row comes from its most recent run with enough data: the kind faults from v0.2, and the
-node faults from v0.3. The headline counts every fault in those rows, and the page says which run and
+node faults from v0.3, or from v0.3.1 for the two faults rerun after the changes above. The headline counts every fault in those rows, and the page says which run and
 which lab each row came from.
 
 ## Predictions, written before the run
@@ -86,6 +116,25 @@ Recorded so the results can't quietly reshape them:
   the app's pods being evicted doesn't trigger a faster app alert first.
 - The inode fault may be caught only after an hour, or by an app alert about evicted pods.
 - Stopping the kubelet should be caught by `KubeNodeNotReady` after about 15 minutes.
+
+## How the predictions did, added after the run
+
+The full run is 42626043262, from commit 8f5de4f, as every result file records. (The commit that added
+the results names cac3182 by mistake.)
+
+- `KubeNodePressure` was **not** muted: it was delivered in the disk and inode trials. The prediction
+  was wrong.
+- Disk full was caught by an app alert first, as the prediction allowed: `KubeDeploymentReplicasMismatch`
+  after about 16 minutes, before any `NodeFilesystem` rule.
+- The inode fault was caught after about 16 minutes too, not an hour, by the same app alert.
+- Stopping the kubelet was caught after about 10 minutes by `TargetDown`, sooner than the 15 minutes
+  predicted for `KubeNodeNotReady`. One trial in five delivered nothing, because Alertmanager was on
+  the stopped node ([investigation](investigations/kubelet-placement.md)).
+- Memory pressure, after its two changes (run 42661880367, `results/v0.3.2`): harm in all five trials,
+  53 to 73 s in. `NodeMemoryHighUtilization` started its wait in every trial and never fired within 30
+  minutes, and `KubeNodePressure` never fired either, so the outcome is pending only, 5 of 5.
+- containerd, then a crash (`results/v0.3.1`): fired, not delivered in 5 of 5, with Alertmanager on the
+  faulted node in all five.
 
 ## Limits
 

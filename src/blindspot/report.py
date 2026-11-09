@@ -151,6 +151,12 @@ def lab_name(lab: str) -> str:
     return "VMs" if lab == "vm" else lab
 
 
+def setup_name(row: dict) -> str:
+    """The lab, and the monitoring setup when it isn't the defaults."""
+    name = lab_name(row["lab"])
+    return f"{name} with Profile C" if row.get("profile") == "c" else name
+
+
 def fault_rows(now: dict, faults: dict, categories: dict, repo_url: str, notes: dict) -> str:
     rows = []
     for row in now["rows"]:
@@ -210,7 +216,7 @@ def control_rows(now: dict, faults: dict) -> str:
         result = "passed" if row["control_passed"] else "failed"
         passed = row["outcome"].removeprefix("passed ")
         rows.append(
-            f"<tr><td><strong>{escape(row['name'])}</strong></td><td>{escape(lab_name(row['lab']))}</td>"
+            f"<tr><td><strong>{escape(row['name'])}</strong></td><td>{escape(setup_name(row))}</td>"
             f"<td>{expect}</td>"
             f'<td><span class="badge {"caught" if row["control_passed"] else "missed"}">{result}</span>: '
             f"{escape(passed)} trials</td></tr>"
@@ -286,7 +292,7 @@ def render(
     negatives = [r for r in s["rows"] if r["fault"] == "negative-quiet"]
     noise = (
         " ".join(
-            f"On {lab_name(r['lab'])}, the negative control ran {plural(r['trials'], 'time')}, 20 minutes each with "
+            f"On {setup_name(r)}, the negative control ran {plural(r['trials'], 'time')}, 20 minutes each with "
             f"no fault, and {'no alert about the app earned credit' if r['control_passed'] else 'it FAILED'}."
             for r in negatives
         )
@@ -297,7 +303,7 @@ def render(
         alerts = ", ".join(q["noise_alerts"]) or "none"
         noise += (
             f" The quiet test, an hour of normal work with no fault, ran {plural(q['valid'], 'valid time')} on "
-            f"{lab_name(q['lab'])}: {q['outcome']}. Alerts delivered as noise: {alerts}."
+            f"{setup_name(q)}: {q['outcome']}. Alerts delivered as noise: {alerts}."
         )
     method = link(repo_url, "docs/method-v0.2.md", "how five trials become one row")
     method_v0 = link(repo_url, "docs/method-v0.md", "how one trial works")

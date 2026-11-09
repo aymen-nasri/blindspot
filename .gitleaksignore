@@ -1,0 +1,6 @@
+# Findings reviewed and confirmed not to be secrets. Each line is one finding's fingerprint, so a new
+# secret in the same file is still caught.
+
+# kubernetes_key_sha256 is the SHA-256 checksum of Kubernetes' public package-signing key, used to verify
+# the key before trusting it. A public checksum, flagged only because its name contains "key".
+4681d2671c539234c6dd4c55d6a5490f211c3b98:vmlab/ansible/group_vars/all.yml:generic-api-key:5

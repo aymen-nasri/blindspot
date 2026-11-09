@@ -4,6 +4,7 @@
 """
 
 import json
+import re
 import shlex
 import threading
 import time
@@ -22,17 +23,21 @@ def _require(params: dict, *keys: str) -> None:
         raise ValueError(f"missing parameters: {', '.join(missing)}")
 
 
-# --- deployment-patch: a strategic merge patch, undone with a rollout undo ------------------------
+# --- deployment-patch: a strategic merge patch, undone by putting the saved pod template back -----
 
 
 def deployment_patch(p: dict) -> dict:
     _require(p, "namespace", "name", "patch")
+    template = kubectl_json("-n", p["namespace"], "get", "deployment", p["name"])["spec"]["template"]
     kubectl("-n", p["namespace"], "patch", "deployment", p["name"], "--type", "strategic", "-p", json.dumps(p["patch"]))
-    return {}
+    return {"template": template}
 
 
-def undo_deployment_patch(p: dict, _: dict) -> None:
-    kubectl("-n", p["namespace"], "rollout", "undo", f"deployment/{p['name']}")
+def undo_deployment_patch(p: dict, state: dict) -> None:
+    """Put the saved template back. Not `kubectl rollout undo`: that needs a second revision, and a rollout
+    stuck before its first new pod never makes one, as the containerd trials in v0.3 showed."""
+    restore = [{"op": "replace", "path": "/spec/template", "value": state["template"]}]
+    kubectl("-n", p["namespace"], "patch", "deployment", p["name"], "--type", "json", "-p", json.dumps(restore))
 
 
 # --- corefile-block: add a server block to CoreDNS, undone by restoring the saved Corefile ---------
@@ -216,23 +221,43 @@ def undo_node_fill_inodes(_: dict, state: dict) -> None:
     on_node(state["node"], f"rm -rf {INODE_DIR}")
 
 
+MEMORY_CHECK = "awk '/^MemAvailable:/ {print $2}' /proc/meminfo; awk '/^oom_kill / {print $2}' /proc/vmstat"
+
+
+def _memory(node: str) -> dict:
+    """Free memory in KiB and the kernel's count of OOM kills so far, read on the node."""
+    out = on_node(node, MEMORY_CHECK, check=False).stdout.split()
+    return {"available_kib": int(out[0]), "oom_kills": int(out[1])} if len(out) == 2 else {}
+
+
 def node_stress_memory(p: dict) -> dict:
     """Hold most of the node's free memory, like a leaking system daemon, until undone.
 
-    OOMScoreAdjust=-1000 protects it from the kernel's OOM killer, as system daemons often are. Without
-    it, the kernel kills stress-ng first, the pressure vanishes, and the app is never hurt, as the first
-    VM trial showed.
+    OOMScoreAdjust=-1000 protects it from the kernel's OOM killer, as system daemons often are. stress-ng
+    normally makes its own workers the OOM killer's first choice and restarts them when killed, which
+    undoes that protection: in v0.3 no trial was harmed, and no memory alert even started its wait.
+    --no-oom-adjust keeps the workers at -1000. The state records free memory and OOM kills before and
+    30 seconds after, so a trial without harm shows whether the pressure was really there.
+
+    The size comes from the node's MemAvailable, which counts memory the kernel can reclaim from caches.
+    stress-ng's own percentages appear to leave that out: in the first rerun, "100%" took about 1.4 GB of the
+    3.3 GB available, the kernel reclaimed caches, and nothing was hurt.
     """
     node = _node(p)
     percent = int(p.get("percent", 90))
     if not 10 <= percent <= 100:
         raise ValueError("percent must be 10 to 100")
+    before = _memory(node)
+    if not before:
+        raise RuntimeError(f"couldn't read memory on {node}")
+    size_kib = before["available_kib"] * percent // 100
     on_node(
         node,
         f"systemd-run --unit={STRESS_UNIT} -p OOMScoreAdjust=-1000 "
-        f"stress-ng --vm 1 --vm-bytes {percent}% --vm-keep --timeout 3h",
+        f"stress-ng --vm 1 --vm-bytes {size_kib}k --vm-keep --no-oom-adjust --timeout 3h",
     )
-    return {"node": node}
+    time.sleep(30)
+    return {"node": node, "size_kib": size_kib, "before": before, "after_30s": _memory(node)}
 
 
 def undo_node_stress_memory(_: dict, state: dict) -> None:
@@ -250,6 +275,40 @@ def node_stop_service(p: dict) -> dict:
 
 def undo_node_stop_service(_: dict, state: dict) -> None:
     on_node(state["node"], f"systemctl start {state['service']}")
+
+
+CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
+
+
+def node_kill_app(p: dict) -> dict:
+    """Kill an app's container processes on their nodes, the way a crash would.
+
+    The processes are found through each container's cgroup, using the container IDs Kubernetes reports,
+    not through the container runtime, so this works while containerd is stopped. Nothing to undo: the
+    kubelet restarts the containers once it can.
+    """
+    _require(p, "namespace", "app")
+    killed = []
+    for pod in kubectl_json("-n", p["namespace"], "get", "pods", "-l", f"app={p['app']}")["items"]:
+        node = pod["spec"]["nodeName"]
+        for status in pod["status"].get("containerStatuses", []):
+            cid = status.get("containerID", "").rpartition("//")[2]
+            if not CONTAINER_ID.fullmatch(cid):
+                continue
+            # The cgroup is named cri-containerd-<id>.scope with the systemd driver, or just <id> with cgroupfs.
+            cgroup = f"$(find /sys/fs/cgroup -type d -name '*{cid}*' | head -1)"
+            pids = on_node(node, f'cat "{cgroup}/cgroup.procs"').stdout
+            pids = [pid for pid in pids.split() if pid.isdigit()]
+            if pids:
+                on_node(node, f"kill -9 {' '.join(pids)}")
+                killed.append({"pod": pod["metadata"]["name"], "node": node, "pids": len(pids)})
+    if not killed:
+        raise RuntimeError(f"no running containers found for app={p['app']}")
+    return {"killed": killed}
+
+
+def undo_node_kill_app(_: dict, __: dict) -> None:
+    pass
 
 
 def node_clock_skew(p: dict) -> dict:
@@ -372,6 +431,7 @@ INJECTORS: dict[str, tuple[Callable[[dict], dict], Callable[[dict, dict], None]]
     "node-fill-inodes": (node_fill_inodes, undo_node_fill_inodes),
     "node-stress-memory": (node_stress_memory, undo_node_stress_memory),
     "node-stop-service": (node_stop_service, undo_node_stop_service),
+    "node-kill-app": (node_kill_app, undo_node_kill_app),
     "node-clock-skew": (node_clock_skew, undo_node_clock_skew),
     "normal-operations": (normal_operations, undo_normal_operations),
 }

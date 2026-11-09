@@ -8,7 +8,7 @@ window_minutes: 30
 inject:
 - type: corefile-block
   params:
-    block: "example.com:53 {\n    errors\n    erratic {\n        delay 1 5s\n    }\n}\n"
+    block: "example.com:53 {\n    errors\n    prometheus :9153\n    erratic {\n        delay 1 5s\n    }\n}\n"
 harm:
   probe: web
   p95_ms: 1500

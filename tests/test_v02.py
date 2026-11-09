@@ -659,3 +659,74 @@ def test_compare_flags_a_failed_control():
     old = summary.summarise([one("dns", "missed", i) for i in range(1, 6)])
     new = summary.summarise([one("positive", "missed", cls="control", passed=False)], min_valid=1)
     assert summary.compare(new, old) == ["positive: the control FAILED (passed 0 of 1)"]
+
+
+def test_a_deployment_patch_is_undone_by_restoring_the_saved_template(monkeypatch):
+    """Not by a rollout undo, which fails when the rollout never made a second revision."""
+    import json
+
+    from blindspot import injectors
+
+    template = {"metadata": {"labels": {"app": "web"}}, "spec": {"containers": [{"name": "web"}]}}
+    calls = []
+    monkeypatch.setattr(injectors, "kubectl_json", lambda *a: {"spec": {"template": template}})
+    monkeypatch.setattr(injectors, "kubectl", lambda *a, **k: calls.append(a))
+    params = {"namespace": "shop", "name": "web", "patch": {"spec": {"replicas": 3}}}
+    state = injectors.deployment_patch(params)
+    injectors.undo_deployment_patch(params, state)
+    assert calls[1][:6] == ("-n", "shop", "patch", "deployment", "web", "--type")
+    assert calls[1][6] == "json"
+    assert json.loads(calls[1][8]) == [{"op": "replace", "path": "/spec/template", "value": template}]
+    assert not any("rollout" in a for a in calls)
+
+
+def test_memory_stress_keeps_its_oom_protection_and_records_the_pressure(monkeypatch):
+    from blindspot import injectors
+
+    monkeypatch.setattr(injectors.time, "sleep", lambda s: None)
+    calls = node_calls(monkeypatch, ["4000000\n0\n", "", "90000\n2\n"])
+    state = injectors.node_stress_memory({"node": "blindspot-worker", "percent": 100})
+    assert "--no-oom-adjust" in calls[1][1] and "OOMScoreAdjust=-1000" in calls[1][1]
+    assert "--vm-bytes 4000000k" in calls[1][1]
+    assert state["size_kib"] == 4000000
+    assert state["before"] == {"available_kib": 4000000, "oom_kills": 0}
+    assert state["after_30s"] == {"available_kib": 90000, "oom_kills": 2}
+
+
+def pod(name, cid):
+    return {
+        "metadata": {"name": name},
+        "spec": {"nodeName": "blindspot-worker"},
+        "status": {"containerStatuses": [{"containerID": f"containerd://{cid}"}]},
+    }
+
+
+def test_the_app_is_killed_through_its_cgroup_not_the_runtime(monkeypatch):
+    from blindspot import injectors
+
+    good = "a" * 64
+    items = [pod("web-1", good), pod("web-2", "not-an-id; rm -rf /")]
+    monkeypatch.setattr(injectors, "kubectl_json", lambda *a: {"items": items})
+    calls = node_calls(monkeypatch, ["101\n102\n"])
+    state = injectors.node_kill_app({"namespace": "shop", "app": "web"})
+    assert len(calls) == 2
+    assert f"-name '*{good}*'" in calls[0][1] and "crictl" not in calls[0][1]
+    assert calls[1][1] == "kill -9 101 102"
+    assert state == {"killed": [{"pod": "web-1", "node": "blindspot-worker", "pids": 2}]}
+
+
+def test_killing_an_app_with_no_running_containers_is_an_error(monkeypatch):
+    from blindspot import injectors
+
+    monkeypatch.setattr(injectors, "kubectl_json", lambda *a: {"items": []})
+    node_calls(monkeypatch)
+    with pytest.raises(RuntimeError, match="no running containers"):
+        injectors.node_kill_app({"namespace": "shop", "app": "web"})
+
+
+def test_rows_under_profile_c_say_so_on_the_page():
+    from blindspot import report
+
+    assert report.setup_name({"lab": "kind", "profile": "a"}) == "kind"
+    assert report.setup_name({"lab": "vm", "profile": "a"}) == "VMs"
+    assert report.setup_name({"lab": "kind", "profile": "c"}) == "kind with Profile C"
