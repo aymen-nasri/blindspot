@@ -87,8 +87,10 @@ deliberate 15-minute wait. The chart ships no rules for CoreDNS, nothing measure
 services or large responses, `info` alerts are muted unless something more serious fires in the same
 namespace, and when the monitoring itself goes down, only something outside the cluster can tell.
 
-The negative control ran 5 times for 20 minutes with no fault, and no alert of any kind fired. So the
-defaults are quiet, at least in this small lab, but that isn't a full test for false alarms yet.
+**False alarms:** the quiet test ran an hour of normal work five times, with rolling restarts, scaling, a
+CronJob and a cordoned node, and the defaults delivered no alert at all. Two rules started their wait
+and never finished it, which is the `for` duration absorbing normal blips as designed
+([results](results/v0.4)). The 20-minute negative control was silent in all five trials too.
 
 Earlier runs, with one trial each, gave the same outcomes: [results/v0.0](results/v0.0) and
 [results/v0.1](results/v0.1).
@@ -120,7 +122,7 @@ So fault 5's row reads "throttling went unreported", not "users were hurt and no
 | Area | ✅ Built and measured | 🧪 Built, results pending | 📐 Planned |
 |---|---|---|---|
 | **Faults** | 10 faults on kind, 5 trials each | 5 node faults on real VMs, and 3 common app faults | The rest of the spec's 34: clock skew, conntrack, etcd, the scheduler and more |
-| **Measurement** | Outside probes, alert receiver, Prometheus watcher read through the API server, minute-by-minute harm timeline | A quiet test: an hour of normal work, counting every alert as noise | — |
+| **Measurement** | Outside probes, alert receiver, Prometheus watcher read through the API server, minute-by-minute harm timeline, and a quiet test for false alarms (no false alarm in 5 hours) | — | — |
 | **Labs** | kind 0.33.0 | A VM lab on free runners: the cluster builds, node-fault results are running | — |
 | **Monitoring compared** | kube-prometheus-stack defaults | The defaults plus BlindSpot's proposed fixes (Profile C) | awesome-prometheus-alerts as another setup |
 | **Fixes** | Five rules and synthetic probes, each passing `promtool`, `pint` and a unit test in CI, each with a runbook | Whether each catches its fault in 4 of 5 trials and stays quiet | Sending findings to the rules' maintainers |
@@ -341,8 +343,9 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
   [results page](https://aymen-nasri.github.io/blindspot/).
 - **v0.3, in progress:** the VM lab works on free runners. Five node faults are written, with their rules
   set in [docs/method-v0.3.md](docs/method-v0.3.md) before any ran. They have no results yet.
-- **v0.4, in progress:** three common app failures and the quiet test are built and running, with rules
-  in [docs/method-v0.4.md](docs/method-v0.4.md). Next: a second monitoring setup to compare.
+- **v0.4, done in part:** three common app failures, all caught in 5 of 5 trials, and the quiet test,
+  with no false alarm in five hours of normal work ([method](docs/method-v0.4.md)). Not done: a second
+  monitoring setup, and the rest of the spec's 34 faults.
 - **v0.5, in progress:** five proposed rules and synthetic probes, passing `promtool`, `pint` and their
   unit tests in CI, with runbooks. Their trials are running ([method](docs/method-v0.5.md)).
 - **v1.0:** the signing release workflow is built; still to do: a first signed release, a demo, and
