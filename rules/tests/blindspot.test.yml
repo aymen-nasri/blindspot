@@ -1,0 +1,127 @@
+# Unit tests for rules/blindspot.rules.yml: `promtool test rules rules/tests/blindspot.test.yml`.
+# Each rule must fire on the failure it's for, and stay silent before it.
+rule_files:
+  - ../blindspot.rules.yml
+evaluation_interval: 30s
+
+tests:
+  - name: app probe failing
+    interval: 30s
+    input_series:
+      - series: 'probe_success{job="blindspot-app", instance="http://web.shop.svc.cluster.local.:8080/work"}'
+        values: '1x10 0x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: BlindSpotAppProbeFailing
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: BlindSpotAppProbeFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              namespace: shop
+              instance: http://web.shop.svc.cluster.local.:8080/work
+            exp_annotations:
+              summary: Synthetic requests to the app are failing.
+              description: More than 10% of blackbox-exporter's requests to this page failed over 5 minutes.
+              runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/app-probe-failing.md
+
+  - name: app probe with a rare blip stays quiet
+    interval: 30s
+    input_series:
+      - series: 'probe_success{job="blindspot-app", instance="http://web.shop.svc.cluster.local.:8080/work"}'
+        values: '1x20 0 1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: BlindSpotAppProbeFailing
+        exp_alerts: []
+
+  - name: NXDOMAIN share rises
+    interval: 30s
+    input_series:
+      - series: 'coredns_dns_responses_total{rcode="NOERROR"}'
+        values: '0+60x60'
+      - series: 'coredns_dns_responses_total{rcode="NXDOMAIN"}'
+        values: '0x10 0+60x50'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CoreDNSHighNXDOMAINRate
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: CoreDNSHighNXDOMAINRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Over a quarter of DNS answers say the name doesn't exist.
+              description: CoreDNS is answering NXDOMAIN for more than 25% of queries, for 5 minutes.
+              runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/coredns-nxdomain.md
+
+  - name: DNS answers slow down
+    interval: 30s
+    input_series:
+      - series: 'coredns_dns_request_duration_seconds_bucket{le="0.1"}'
+        values: '0+10x10 100x50'
+      - series: 'coredns_dns_request_duration_seconds_bucket{le="1"}'
+        values: '0+10x10 100x50'
+      - series: 'coredns_dns_request_duration_seconds_bucket{le="8.192"}'
+        values: '0+10x60'
+      - series: 'coredns_dns_request_duration_seconds_bucket{le="+Inf"}'
+        values: '0+10x60'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CoreDNSSlowResponses
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: CoreDNSSlowResponses
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: DNS answers are slow.
+              description: The 99th percentile of CoreDNS response time has been over 1 second for 5 minutes.
+              runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/coredns-slow.md
+
+  - name: heavy CPU throttling reaches warning
+    interval: 30s
+    input_series:
+      - series: 'container_cpu_cfs_periods_total{namespace="shop", pod="web-1", container="web"}'
+        values: '0+100x80'
+      - series: 'container_cpu_cfs_throttled_periods_total{namespace="shop", pod="web-1", container="web"}'
+        values: '0+10x10 100+80x70'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: CPUThrottlingHigh
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: CPUThrottlingHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              namespace: shop
+              pod: web-1
+              container: web
+            exp_annotations:
+              summary: A container is throttled most of the time.
+              description: Over half of this container's CPU periods were throttled, for 15 minutes.
+              runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/cpu-throttling.md
+
+  - name: admission webhook can't be called
+    interval: 30s
+    input_series:
+      - series: 'apiserver_admission_webhook_rejection_count{name="broken.blindspot.test", error_type="calling_webhook_error"}'
+        values: '0x10 0+6x40'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: KubeAPIAdmissionWebhookErrors
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: KubeAPIAdmissionWebhookErrors
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              name: broken.blindspot.test
+            exp_annotations:
+              summary: The API server can't reach an admission webhook.
+              description: Requests are being rejected because a webhook couldn't be called, for 5 minutes.
+              runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/admission-webhook-errors.md

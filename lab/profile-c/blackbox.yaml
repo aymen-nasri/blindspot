@@ -1,0 +1,68 @@
+# Profile C's synthetic checks: blackbox-exporter fetches the app's pages from inside the cluster, and a
+# Probe tells the Prometheus Operator to scrape it every 30 s. BlindSpot's own probes run outside the
+# cluster and only judge harm; these are part of the monitoring being judged.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blackbox-exporter
+  template:
+    metadata:
+      labels:
+        app: blackbox-exporter
+    spec:
+      containers:
+        - name: blackbox-exporter
+          image: quay.io/prometheus/blackbox-exporter:v0.29.1
+          ports:
+            - containerPort: 9115
+          readinessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9115
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+spec:
+  selector:
+    app: blackbox-exporter
+  ports:
+    - port: 9115
+      targetPort: 9115
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: blindspot-app
+  namespace: monitoring
+  labels:
+    release: kps
+spec:
+  jobName: blindspot-app
+  interval: 30s
+  scrapeTimeout: 10s
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.monitoring.svc:9115
+  targets:
+    staticConfig:
+      # The trailing dot stops search-domain lookups, which would otherwise add NXDOMAIN answers.
+      static:
+        - http://web.shop.svc.cluster.local.:8080/work
+        - http://web.shop.svc.cluster.local.:8080/work?big=1
+      labels:
+        namespace: shop

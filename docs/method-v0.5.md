@@ -1,0 +1,52 @@
+# Method for v0.5: proposed fixes
+
+Written before any Profile C trial ran. Trials and scoring work exactly as in
+[method-v0.md](method-v0.md) and [method-v0.2.md](method-v0.2.md). v0.5 asks the second question: once a
+gap is found, does a fix close it without adding noise?
+
+## Profile C
+
+Profile A is the chart's defaults, the headline. Profile C is the same chart and values, plus:
+
+| Addition | Closes the gap in |
+|---|---|
+| blackbox-exporter fetching `/work` and `/work?big=1` from inside the cluster every 30 s, with `BlindSpotAppProbeFailing` alerting when over 10% fail for 5 minutes | Packet loss, the MTU black hole, the NetworkPolicy block |
+| `CoreDNSHighNXDOMAINRate`: over 25% of answers NXDOMAIN for 5 minutes | Upstream NXDOMAIN |
+| `CoreDNSSlowResponses`: 99th-percentile DNS time over 1 s for 5 minutes | Slow DNS |
+| `CPUThrottlingHigh` at warning severity: over 50% of CPU periods throttled for 15 minutes | CPU throttling, whose info-level alert is muted |
+| `KubeAPIAdmissionWebhookErrors`: requests rejected because a webhook couldn't be called, for 5 minutes | The broken admission webhook |
+
+The rules are in [rules/blindspot.rules.yml](../rules/blindspot.rules.yml), and the lab loads that same
+file. Every rule has `warning` severity, so `InfoInhibitor` can't mute it, and a runbook in
+[docs/runbooks](runbooks).
+
+No rule inside the cluster can fix Prometheus or Alertmanager being down: there's nothing left to
+evaluate or deliver. That fix is an outside dead man's switch watching for `Watchdog`, so those two
+faults aren't part of Profile C.
+
+## The four gates
+
+A proposed rule only counts as a fix if it passes all four:
+
+1. **Valid:** `promtool check rules` and `pint lint` pass, in CI on every push.
+2. **Unit tested:** `promtool test rules` shows it fires on its failure and stays silent before it, in CI.
+3. **Catches its fault:** under Profile C, its fault is caught in at least 4 of 5 trials.
+4. **Stays quiet:** under Profile C, the quiet test delivers nothing from it.
+
+## Fairness
+
+- Each fault is judged by the same relevance list as under Profile A, written before v0.0. A fix that
+  helps a person but doesn't point at the cause doesn't count: the app probe failing during a DNS fault
+  doesn't count for the DNS fault.
+- Profile C rows never enter the headline, which stays about the defaults. The results page shows them
+  side by side with Profile A.
+- The positive and negative controls run under Profile C too.
+
+## Predictions, written before the run
+
+- DNS faults: caught after about 6 to 10 minutes, by the CoreDNS rules.
+- Packet loss, MTU and NetworkPolicy: caught after about 3 to 8 minutes, by the app probe.
+- CPU throttling: caught after about 16 minutes, the same 15-minute wait as the default rule.
+- Webhook: caught after about 6 to 10 minutes, if the API server exports the webhook rejection metric
+  in this version. If it doesn't, the rule can't fire, and that's reported as a failed fix.
+- The quiet test: no noise from these rules. The NXDOMAIN rule is the most likely to make some.

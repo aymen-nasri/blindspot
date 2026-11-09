@@ -5,6 +5,7 @@ they are KVM guests with their own kernels and disks. Both get the same monitori
 """
 
 import base64
+import json
 import os
 from pathlib import Path
 
@@ -18,6 +19,8 @@ CHART = "prometheus-community/kube-prometheus-stack"
 CHART_VERSION = "92.22.0"
 NAMESPACE = "monitoring"
 LAB_TYPES = ("kind", "vm")
+# A: the chart's defaults, the headline. C: the defaults plus BlindSpot's proposed fixes (docs/method-v0.5.md).
+PROFILES = ("a", "c")
 VM_NODES = {
     "blindspot-control-plane": "192.168.122.10",
     "blindspot-worker": "192.168.122.11",
@@ -28,13 +31,16 @@ VM_GATEWAY = "192.168.122.1"  # libvirt's default network, as seen from the VMs
 # Which lab this process drives. Set once, by the CLI, before anything runs.
 TYPE = "kind"
 VMLAB = Path("vmlab")
+PROFILE = "a"
 
 
-def use(lab_type: str, vmlab_dir: Path = Path("vmlab")) -> None:
-    global TYPE, VMLAB
+def use(lab_type: str, vmlab_dir: Path = Path("vmlab"), profile: str = "a") -> None:
+    global TYPE, VMLAB, PROFILE
     if lab_type not in LAB_TYPES:
         raise ValueError(f"lab type must be one of {LAB_TYPES}, not {lab_type!r}")
-    TYPE, VMLAB = lab_type, vmlab_dir
+    if profile not in PROFILES:
+        raise ValueError(f"profile must be one of {PROFILES}, not {profile!r}")
+    TYPE, VMLAB, PROFILE = lab_type, vmlab_dir, profile
     if lab_type == "vm":
         out = vmlab_dir / "out"
         os.environ["KUBECONFIG"] = str((out / "kubeconfig").resolve())
@@ -94,7 +100,27 @@ def up(lab_dir: Path, receiver_port: int, values_out: Path = Path("/tmp/kps-valu
     )
     for deploy in ("web", "api"):
         kubectl("-n", "shop", "rollout", "status", f"deployment/{deploy}", "--timeout=5m")
+    if PROFILE == "c":
+        install_profile_c(lab_dir)
     return url
+
+
+def prometheus_rule(rules_file: Path) -> dict:
+    """The proposed rules as a PrometheusRule. The release label makes the chart's Prometheus load it."""
+    return {
+        "apiVersion": "monitoring.coreos.com/v1",
+        "kind": "PrometheusRule",
+        "metadata": {"name": "blindspot", "namespace": NAMESPACE, "labels": {"release": "kps"}},
+        "spec": yaml.safe_load(rules_file.read_text(encoding="utf-8")),
+    }
+
+
+def install_profile_c(lab_dir: Path) -> None:
+    """The fixes under test: the proposed rules from rules/, and blackbox-exporter probing the app."""
+    rules_file = lab_dir.parent / "rules" / "blindspot.rules.yml"
+    kubectl("apply", "-f", "-", stdin=json.dumps(prometheus_rule(rules_file)))
+    kubectl("apply", "-f", str(lab_dir / "profile-c" / "blackbox.yaml"))
+    kubectl("-n", NAMESPACE, "rollout", "status", "deployment/blackbox-exporter", "--timeout=5m")
 
 
 def down() -> None:

@@ -65,12 +65,12 @@ def current(runs: list[tuple[str, list[dict]]]) -> list[dict]:
     `runs` is oldest first. A newer run without enough data doesn't replace an older one that had it.
     A fault that never had enough data keeps its most recent run, and shows as "not enough data".
     """
-    chosen: dict[tuple[str, str], list[dict]] = {}
-    settled: dict[tuple[str, str], bool] = {}
+    chosen: dict[tuple[str, str, str], list[dict]] = {}
+    settled: dict[tuple[str, str, str], bool] = {}
     for _name, results in runs:
-        groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+        groups: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
         for r in results:
-            groups[(r["fault"], r.get("lab", "kind"))].append(r)
+            groups[(r["fault"], r.get("lab", "kind"), r.get("profile", "a"))].append(r)
         for key, trials in groups.items():
             enough = has_enough(trials)
             if enough or not settled.get(key):
@@ -154,7 +154,7 @@ def lab_name(lab: str) -> str:
 def fault_rows(now: dict, faults: dict, categories: dict, repo_url: str, notes: dict) -> str:
     rows = []
     for row in now["rows"]:
-        if row["class"] in ("control", "quiet"):
+        if row["class"] in ("control", "quiet") or row["profile"] != "a":
             continue
         fault = faults.get(row["fault"])
         category = categories.get(row["fault"], "other")
@@ -183,6 +183,23 @@ def fault_rows(now: dict, faults: dict, categories: dict, repo_url: str, notes: 
     return "\n".join(rows)
 
 
+def before_after_rows(now: dict) -> str:
+    """Profile A against Profile C, for every fault measured under both."""
+    rows = {(r["fault"], r["lab"], r["profile"]): r for r in now["rows"] if r["class"] not in ("control", "quiet")}
+    out = []
+    for (fault, lab_type, profile), after in sorted(rows.items(), key=lambda kv: kv[1]["number"] or 0):
+        if profile != "c" or (fault, lab_type, "a") not in rows:
+            continue
+        before = rows[(fault, lab_type, "a")]
+        alerts = ", ".join(f"<code>{escape(a)}</code>" for a in after["first_alerts"]) or "–"
+        time_cell = f"about {after['median_caught_min']} min" if after.get("median_caught_min") is not None else "–"
+        out.append(
+            f"<tr><td>{escape(after['name'])}</td><td>{badge(before['outcome'])}</td><td>{badge(after['outcome'])}</td>"
+            f"<td>{escape(after.get('spread', ''))}</td><td>{time_cell}</td><td>{alerts}</td></tr>"
+        )
+    return "\n".join(out)
+
+
 def control_rows(now: dict, faults: dict) -> str:
     rows = []
     for row in now["rows"]:
@@ -199,6 +216,22 @@ def control_rows(now: dict, faults: dict) -> str:
             f"{escape(passed)} trials</td></tr>"
         )
     return "\n".join(rows)
+
+
+def before_after(s: dict) -> str:
+    rows = before_after_rows(s)
+    if not rows:
+        return (
+            "<h2>Before and after</h2>\n<p>Profile C, the defaults plus BlindSpot's proposed rules and synthetic "
+            "probes, has no results yet.</p>"
+        )
+    return (
+        "<h2>Before and after</h2>\n<p>The same faults under Profile C: the chart's defaults plus BlindSpot's "
+        "proposed rules and synthetic probes. A fix only counts if it catches its fault in at least 4 of 5 "
+        'trials and the quiet test stays quiet.</p>\n<div class="table-wrap"><table><thead><tr><th>Failure</th>'
+        "<th>Defaults</th><th>With fixes</th><th>Every trial, with fixes</th><th>Median time</th>"
+        f"<th>First alert</th></tr></thead><tbody>\n{rows}\n</tbody></table></div>"
+    )
 
 
 def history_rows(runs: list[dict]) -> str:
@@ -367,6 +400,8 @@ runs from the harm starting to that delivery.</p>
 <span class="badge pending">pending only</span> a rule's condition became true, but its wait never ended.
 <span class="badge missed">missed</span> nothing relevant happened.
 <span class="badge mixed">mixed</span> no outcome won more than half the valid trials.</p>
+
+{before_after(s)}
 
 <h2>Controls</h2>
 <p>These check the tool itself. If one fails, no number above can be trusted.</p>

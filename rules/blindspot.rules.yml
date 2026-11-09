@@ -1,0 +1,75 @@
+# BlindSpot's proposed rules: Profile C, the chart's defaults plus these. Each closes a gap the defaults
+# left in v0.2, and must pass four gates before it counts as a fix (docs/method-v0.5.md):
+#   1. valid: `promtool check rules` and `pint lint` pass
+#   2. unit tested: `promtool test rules rules/tests/` passes
+#   3. catches its fault: in at least 4 of 5 trials under Profile C
+#   4. stays quiet: the quiet test raises nothing from it under Profile C
+# The lab loads this same file as a PrometheusRule, so what's tested is what's deployed.
+groups:
+  - name: blindspot.app
+    rules:
+      # Symptom, not cause: blackbox-exporter fetches the app's pages from inside the cluster every 30 s,
+      # so anything that breaks requests shows up here, whatever the cause.
+      - alert: BlindSpotAppProbeFailing
+        expr: avg by (instance) (avg_over_time(probe_success{job="blindspot-app"}[5m])) < 0.9
+        for: 2m
+        labels:
+          severity: warning
+          namespace: shop
+        annotations:
+          summary: Synthetic requests to the app are failing.
+          description: More than 10% of blackbox-exporter's requests to this page failed over 5 minutes.
+          runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/app-probe-failing.md
+
+  - name: blindspot.dns
+    rules:
+      # The chart ships no CoreDNS rules at all. NXDOMAIN is common where search domains expand names,
+      # so tune the threshold to your cluster; the quiet test checks it in the lab.
+      - alert: CoreDNSHighNXDOMAINRate
+        expr: >-
+          sum(rate(coredns_dns_responses_total{rcode="NXDOMAIN"}[5m]))
+          / sum(rate(coredns_dns_responses_total[5m])) > 0.25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Over a quarter of DNS answers say the name doesn't exist.
+          description: CoreDNS is answering NXDOMAIN for more than 25% of queries, for 5 minutes.
+          runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/coredns-nxdomain.md
+      - alert: CoreDNSSlowResponses
+        expr: >-
+          histogram_quantile(0.99, sum by (le) (rate(coredns_dns_request_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: DNS answers are slow.
+          description: The 99th percentile of CoreDNS response time has been over 1 second for 5 minutes.
+          runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/coredns-slow.md
+
+  - name: blindspot.resources
+    rules:
+      # A second tier of the chart's info-level rule. At warning severity, InfoInhibitor doesn't mute it.
+      - alert: CPUThrottlingHigh
+        expr: >-
+          sum by (namespace, pod, container) (increase(container_cpu_cfs_throttled_periods_total{container!=""}[5m]))
+          / sum by (namespace, pod, container) (increase(container_cpu_cfs_periods_total{container!=""}[5m])) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: A container is throttled most of the time.
+          description: Over half of this container's CPU periods were throttled, for 15 minutes.
+          runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/cpu-throttling.md
+
+  - name: blindspot.apiserver
+    rules:
+      - alert: KubeAPIAdmissionWebhookErrors
+        expr: sum by (name) (rate(apiserver_admission_webhook_rejection_count{error_type="calling_webhook_error"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: The API server can't reach an admission webhook.
+          description: Requests are being rejected because a webhook couldn't be called, for 5 minutes.
+          runbook_url: https://github.com/aymen-nasri/blindspot/blob/main/docs/runbooks/admission-webhook-errors.md
