@@ -130,6 +130,11 @@ the results names cac3182 by mistake.)
 - Stopping the kubelet was caught after about 10 minutes by `TargetDown`, sooner than the 15 minutes
   predicted for `KubeNodeNotReady`. One trial in five delivered nothing, because Alertmanager was on
   the stopped node ([investigation](investigations/kubelet-placement.md)).
+- Memory pressure, after its two changes (run 42661880367, `results/v0.3.2`): harm in all five trials,
+  53 to 73 s in. `NodeMemoryHighUtilization` started its wait in every trial and never fired within 30
+  minutes, and `KubeNodePressure` never fired either, so the outcome is pending only, 5 of 5.
+- containerd, then a crash (`results/v0.3.1`): fired, not delivered in 5 of 5, with Alertmanager on the
+  faulted node in all five.
 
 ## Limits
 
