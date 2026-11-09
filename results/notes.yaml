@@ -1,0 +1,6 @@
+# Notes shown on the results page under a fault, for anything a reader must know to read its row fairly.
+cpu-throttle: >-
+  Open question: the probes confirmed harm about 40 s in, but no longer saw it by the end of the window,
+  in every trial. Part of the early harm may be the pods restarting when the limit was applied. The
+  throttling alert fired every time, so read this row as "throttling went unreported", not yet as "users
+  were hurt and nobody was told". A rerun that records harm minute by minute is under way.
