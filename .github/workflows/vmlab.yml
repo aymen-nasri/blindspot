@@ -38,14 +38,14 @@ jobs:
           python3 -m pip install --quiet ansible-core==2.21.6
 
       - name: Start three VMs
-        run: time vmlab/up.sh
+        run: time bash vmlab/up.sh
 
       - name: Build Kubernetes on them with Ansible
         working-directory: vmlab/ansible
         run: time ansible-playbook -i ../out/inventory.ini site.yml
 
       - name: Add pod networking and wait for the nodes
-        run: time vmlab/finish.sh
+        run: time bash vmlab/finish.sh
 
       - name: Run a pod on each worker
         env:
