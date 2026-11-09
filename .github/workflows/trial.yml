@@ -71,14 +71,15 @@ jobs:
         env:
           FAULT: ${{ matrix.fault }}
           TRIAL: ${{ matrix.trial }}
-        run: blindspot run --fault "$FAULT" --trial "$TRIAL" --out results
+        # A folder of its own, so the artifact holds this trial's result and not the committed ones.
+        run: blindspot run --fault "$FAULT" --trial "$TRIAL" --out trial-out
 
       - name: Save the result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: result-${{ matrix.fault }}-${{ matrix.trial }}
-          path: results/
+          path: trial-out/
           if-no-files-found: warn
 
   summary:

@@ -35,7 +35,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends qemu-system-x86 qemu-utils libvirt-daemon-system virtinst
-          python3 -m pip install --quiet ansible-core==2.22.0
+          python3 -m pip install --quiet ansible-core==2.21.6
 
       - name: Start three VMs
         run: time vmlab/up.sh
