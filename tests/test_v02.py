@@ -280,7 +280,17 @@ def test_disk_fill_is_sized_from_df_and_undone_by_one_file(monkeypatch):
     assert state == {"node": "blindspot-worker", "bytes": 7000}
     assert calls[1] == ("blindspot-worker", "fallocate -l 7000 /var/lib/blindspot-fill")
     injectors.undo_node_fill_disk({}, state)
-    assert calls[2] == ("blindspot-worker", "rm -f /var/lib/blindspot-fill")
+    assert calls[2] == ("blindspot-worker", "rm -f /var/lib/blindspot-fill /var/lib/blindspot-fill-rest")
+
+
+def test_a_full_disk_leaves_fallocate_a_margin_then_writes_the_rest(monkeypatch):
+    """fallocate of exactly df's free space fails with ENOSPC, as the first VM trial found."""
+    from blindspot import injectors
+
+    calls = node_calls(monkeypatch, [f"1000 {100 * 1024 * 1024}"])
+    injectors.node_fill_disk({"node": "blindspot-worker", "percent": 100})
+    assert calls[1][1] == f"fallocate -l {68 * 1024 * 1024} /var/lib/blindspot-fill"
+    assert calls[2][1] == "dd if=/dev/zero of=/var/lib/blindspot-fill-rest bs=1M status=none"
 
 
 def test_only_kubelet_and_containerd_can_be_stopped(monkeypatch):
