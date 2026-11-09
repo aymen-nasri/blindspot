@@ -722,3 +722,11 @@ def test_killing_an_app_with_no_running_containers_is_an_error(monkeypatch):
     node_calls(monkeypatch)
     with pytest.raises(RuntimeError, match="no running containers"):
         injectors.node_kill_app({"namespace": "shop", "app": "web"})
+
+
+def test_rows_under_profile_c_say_so_on_the_page():
+    from blindspot import report
+
+    assert report.setup_name({"lab": "kind", "profile": "a"}) == "kind"
+    assert report.setup_name({"lab": "vm", "profile": "a"}) == "VMs"
+    assert report.setup_name({"lab": "kind", "profile": "c"}) == "kind with Profile C"
