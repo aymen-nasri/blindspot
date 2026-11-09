@@ -105,6 +105,20 @@ Recorded so the results can't quietly reshape them:
 - The inode fault may be caught only after an hour, or by an app alert about evicted pods.
 - Stopping the kubelet should be caught by `KubeNodeNotReady` after about 15 minutes.
 
+## How the predictions did, added after the run
+
+The full run is 42626043262, from commit 8f5de4f, as every result file records. (The commit that added
+the results names cac3182 by mistake.)
+
+- `KubeNodePressure` was **not** muted: it was delivered in the disk and inode trials. The prediction
+  was wrong.
+- Disk full was caught by an app alert first, as the prediction allowed: `KubeDeploymentReplicasMismatch`
+  after about 16 minutes, before any `NodeFilesystem` rule.
+- The inode fault was caught after about 16 minutes too, not an hour, by the same app alert.
+- Stopping the kubelet was caught after about 10 minutes by `TargetDown`, sooner than the 15 minutes
+  predicted for `KubeNodeNotReady`. One trial in five delivered nothing, because Alertmanager was on
+  the stopped node ([investigation](investigations/kubelet-placement.md)).
+
 ## Limits
 
 - The VMs run nested inside a CI runner, so they're slower and noisier than real servers.
