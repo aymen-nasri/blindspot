@@ -111,8 +111,10 @@ cluster that matters.**
 - **v0.2, done:** 5 trials per fault on GitHub Actions, results in Git, and the
   [results page](https://aymen-nasri.github.io/blindspot/).
 - **v0.3, in progress:** a lab of real VMs (QEMU, cloud-init, Ansible and kubeadm, in [vmlab/](vmlab)),
-  for faults that kind can't make honestly, such as full disks, memory pressure and clock skew. Free
-  runners have KVM, but the lab hasn't built a working cluster yet.
+  for faults that kind can't make honestly. On a free runner it builds a three-node Kubernetes 1.37
+  cluster in about 4.5 minutes. Five node faults (full disk, no inodes, memory pressure, kubelet or
+  containerd stopped) are written, with their rules set in [docs/method-v0.3.md](docs/method-v0.3.md)
+  before any of them ran. They have no results yet.
 - **Later:** more faults, a quiet test for false alarms, and proposed fixes with tested rules.
 
 Why it's built this way: [docs/decisions](docs/decisions).
