@@ -1,0 +1,3 @@
+# Store every text file with LF line endings, whatever system edits it. A shell script with CRLF
+# endings fails on Linux runners, and the repo is edited from Windows too.
+* text=auto eol=lf
