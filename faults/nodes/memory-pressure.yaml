@@ -4,7 +4,7 @@ name: Node memory pressure
 class: harm
 runs_on:
 - vm
-# NodeMemoryHighUtilization, the slowest relevant rule, waits 15 minutes.
+# NodeMemoryHighUtilization, the slowest rule naming the cause, waits 15 minutes.
 window_minutes: 30
 inject:
 - type: node-stress-memory

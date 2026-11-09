@@ -4,7 +4,7 @@ name: Node disk full
 class: harm
 runs_on:
 - vm
-# NodeFilesystemAlmostOutOfSpace, the slowest relevant rule that can fire, waits 30 minutes.
+# NodeFilesystemAlmostOutOfSpace, the slowest rule naming the cause, waits 30 minutes.
 window_minutes: 45
 inject:
 - type: node-fill-disk
