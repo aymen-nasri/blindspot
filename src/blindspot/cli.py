@@ -104,6 +104,19 @@ def report_cmd(args) -> int:
     return 0
 
 
+def compare_cmd(args) -> int:
+    """Compare a new run with a published one. Exits 1 if any outcome changed, so CI can act on it."""
+    new = summary.summarise(report.load_results(Path(args.new), Path(args.catalog)), min_valid=1)
+    old = summary.summarise(report.load_results(Path(args.baseline), Path(args.catalog)))
+    changes = summary.compare(new, old)
+    if not changes:
+        print(f"No outcome changed from {args.baseline}.")
+        return 0
+    print(f"Outcomes changed from {args.baseline}:\n")
+    print("\n".join(f"- {line}" for line in changes))
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="blindspot", description=__doc__)
     parser.add_argument("--catalog", default="faults", help="directory of fault files")
@@ -140,6 +153,11 @@ def main(argv: list[str] | None = None) -> int:
     score_parser.add_argument("--expect-trials", type=int, help="trials planned per fault, to count missing ones")
     score_parser.add_argument("--expect-faults", help="JSON list of the fault ids planned, to spot absent ones")
     score_parser.set_defaults(func=score_cmd)
+
+    compare_parser = sub.add_parser("compare", help="list faults whose outcome changed from a published run")
+    compare_parser.add_argument("new")
+    compare_parser.add_argument("baseline")
+    compare_parser.set_defaults(func=compare_cmd)
 
     report_parser = sub.add_parser("report", help="build the static results page from every run under a directory")
     report_parser.add_argument("results", nargs="?", default="results")

@@ -622,3 +622,40 @@ def test_profile_c_rows_never_enter_the_headline():
     s = summary.summarise(rows)
     assert (s["caught"], s["of"]) == (0, 1)
     assert sorted(r["profile"] for r in s["rows"]) == ["a", "c"]
+
+
+# --- Weekly regression ------------------------------------------------------------------------------------
+
+
+def one(fault, outcome, trial=1, cls="harm", passed=None):
+    r = {
+        "fault": fault,
+        "lab": "kind",
+        "profile": "a",
+        "class": cls,
+        "trial": trial,
+        "status": "valid",
+        "outcome": outcome,
+        "number": 1,
+        "name": fault,
+        "seconds_after_harm": 900 if outcome == "caught" else None,
+    }
+    if passed is not None:
+        r["control_passed"] = passed
+    return r
+
+
+def test_compare_reports_only_real_changes():
+    old = summary.summarise(
+        [one("dns", "missed", i) for i in range(1, 6)] + [one("crash", "caught", i) for i in range(1, 6)]
+    )
+    same = summary.summarise([one("dns", "missed"), one("crash", "caught")], min_valid=1)
+    assert summary.compare(same, old) == []
+    changed = summary.summarise([one("dns", "caught"), one("crash", "caught")], min_valid=1)
+    assert summary.compare(changed, old) == ["dns: missed before, caught now (1 caught)"]
+
+
+def test_compare_flags_a_failed_control():
+    old = summary.summarise([one("dns", "missed", i) for i in range(1, 6)])
+    new = summary.summarise([one("positive", "missed", cls="control", passed=False)], min_valid=1)
+    assert summary.compare(new, old) == ["positive: the control FAILED (passed 0 of 1)"]

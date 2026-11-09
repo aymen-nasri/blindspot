@@ -1,0 +1,55 @@
+name: regression
+
+# Every Monday: the ten original faults, one trial each, compared with the published v0.2 outcomes.
+# If any outcome changed, or a control failed, it opens an issue with the differences. That's how a new
+# chart version, or a change in the runners, would show up.
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trials:
+    uses: ./.github/workflows/trial.yml
+    with:
+      faults: '["crashloop","cpu-throttle","dns-nxdomain","dns-slow","packet-loss","mtu-blackhole","netpol-deny","webhook-down","alertmanager-down","prometheus-down","positive-crashloop"]'
+      trials: "1"
+
+  compare:
+    needs: trials
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: run-results
+      - name: Compare with the published outcomes
+        id: compare
+        run: |
+          python3 -m pip install --quiet .
+          if blindspot compare run-results results/v0.2 > changes.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          cat changes.md | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Open an issue if anything changed
+        if: steps.compare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            cat changes.md
+            echo
+            echo "Run: $RUN_URL"
+          } > body.md
+          gh issue create --title "Weekly regression: outcomes changed" --body-file body.md
