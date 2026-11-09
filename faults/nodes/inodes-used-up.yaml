@@ -4,7 +4,7 @@ name: Node out of inodes
 class: harm
 runs_on:
 - vm
-# NodeFilesystemAlmostOutOfFiles and NodeFilesystemFilesFillingUp, the slowest relevant rules, wait 1 hour.
+# NodeFilesystemAlmostOutOfFiles and NodeFilesystemFilesFillingUp, the slowest rules naming the cause, wait 1 hour.
 window_minutes: 75
 inject:
 - type: node-fill-inodes

@@ -4,7 +4,7 @@ name: Kubelet stopped
 class: harm
 runs_on:
 - vm
-# KubeNodeNotReady and KubeNodeUnreachable, the slowest relevant rules, wait 15 minutes.
+# KubeNodeNotReady and KubeNodeUnreachable, the slowest rules naming the cause, wait 15 minutes.
 window_minutes: 30
 inject:
 - type: node-stop-service

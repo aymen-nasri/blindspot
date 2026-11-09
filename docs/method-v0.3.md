@@ -24,8 +24,10 @@ kind's own CNI only exists inside kind.
 ## The node faults
 
 All five break `blindspot-worker`, the node the web app runs on. Each window is the longest default
-wait among the alerts that count for that fault, plus 15 minutes, so no rule is scored as missed while
-it's still waiting by design.
+wait among the rules that name the fault's cause, plus 15 minutes, and never under 30 minutes, so no
+such rule is scored as missed while it's still waiting by design. App alerts count too, but they don't
+set the window: most wait 15 minutes, which every window covers, and one, `KubeContainerWaiting`,
+waits an hour, which would make every window 75 minutes.
 
 | # | Fault | Longest relevant wait | Window | Harm must show within |
 |---|---|---|---|---|

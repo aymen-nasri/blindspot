@@ -4,7 +4,7 @@ name: containerd stopped
 class: harm
 runs_on:
 - vm
-# KubeNodeNotReady, the slowest relevant rule, waits 15 minutes.
+# KubeNodeNotReady, the slowest rule naming the cause, waits 15 minutes.
 window_minutes: 30
 inject:
 - type: node-stop-service
