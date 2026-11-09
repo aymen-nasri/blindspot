@@ -1,0 +1,31 @@
+id: unready
+number: 4
+name: All replicas unready
+class: harm
+runs_on:
+- kind
+# KubePodNotReady and KubeDeploymentReplicasMismatch, the slowest rules naming the cause, wait 15 minutes.
+window_minutes: 30
+inject:
+- type: deployment-patch
+  params:
+    namespace: shop
+    name: web
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: web
+              readinessProbe:
+                httpGet:
+                  path: /does-not-exist
+                  port: 8080
+harm:
+  probe: web
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+why: A release ships a readiness probe that always fails. The pods keep running, but none is ever ready, so the
+  Service has no endpoints and every request is refused.

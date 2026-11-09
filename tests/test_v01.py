@@ -23,7 +23,8 @@ T0, HARM = 1000.0, 1050.0
 def test_the_catalogue_has_the_ten_faults_and_four_controls():
     real = [f for f in FAULTS.values() if f.fault_class != "control" and "kind" in f.runs_on]
     controls = [f for f in FAULTS.values() if f.fault_class == "control"]
-    assert sorted(f.number for f in real) == [1, 5, 8, 9, 10, 11, 14, 25, 32, 33]
+    # The ten from v0.0, plus the three common app failures added in v0.4.
+    assert sorted(f.number for f in real) == [1, 2, 3, 4, 5, 8, 9, 10, 11, 14, 25, 32, 33]
     assert sorted(f.expect for f in controls) == ["caught", "invalid: no harm", "invalid: receiver", "not caught"]
 
 
