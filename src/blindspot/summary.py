@@ -40,6 +40,16 @@ def summarise_fault(trials: list[dict], *, min_valid: int = MIN_VALID, expected:
         "files": [t["_file"] for t in trials if "_file" in t],
     }
 
+    if row["class"] == "quiet":
+        noisy = [t for t in valid if (t.get("noise") or {}).get("delivered")]
+        names = Counter(name for t in valid for name in (t.get("noise") or {}).get("delivered", []))
+        if len(valid) < min_valid:
+            row["outcome"] = "not enough data"
+        else:
+            row["outcome"] = "quiet" if not noisy else f"noisy in {len(noisy)} of {len(valid)}"
+        row.update(noise_alerts=dict(names.most_common()), spread=spread(row) if valid else "")
+        return row
+
     if row["class"] == "control":
         passed = sum(bool(t.get("control_passed")) for t in trials)
         row.update(outcome=f"passed {passed} of {len(trials)}", control_passed=passed == len(trials) and passed > 0)
@@ -87,7 +97,7 @@ def summarise(
     rows.sort(key=lambda r: (r["class"] == "control", r["number"] or 0, r["lab"]))
     absent = sorted(set(expected_faults or []) - {fault for fault, _ in by_fault})
 
-    real = [r for r in rows if r["class"] != "control" and r["outcome"] != "not enough data"]
+    real = [r for r in rows if r["class"] not in ("control", "quiet") and r["outcome"] != "not enough data"]
     caught = [r for r in real if r["outcome"] == "caught"]
     controls = [r for r in rows if r["class"] == "control"]
     medians = [r["median_caught_s"] for r in caught if r["median_caught_s"] is not None]
@@ -108,7 +118,7 @@ def summarise(
 
 def untrusted_labs(rows: list[dict]) -> list[str]:
     """Labs with fault rows whose controls didn't all pass there, or didn't run there at all."""
-    labs = {r["lab"] for r in rows if r["class"] != "control"}
+    labs = {r["lab"] for r in rows if r["class"] not in ("control", "quiet")}
     return sorted(
         lab
         for lab in labs

@@ -154,7 +154,7 @@ def lab_name(lab: str) -> str:
 def fault_rows(now: dict, faults: dict, categories: dict, repo_url: str, notes: dict) -> str:
     rows = []
     for row in now["rows"]:
-        if row["class"] == "control":
+        if row["class"] in ("control", "quiet"):
             continue
         fault = faults.get(row["fault"])
         category = categories.get(row["fault"], "other")
@@ -234,7 +234,7 @@ def render(
         if "vm" in labs
         else "on a fresh kind cluster for every trial"
     )
-    shown = sorted({categories.get(r["fault"], "other") for r in s["rows"] if r["class"] != "control"})
+    shown = sorted({categories.get(r["fault"], "other") for r in s["rows"] if r["class"] not in ("control", "quiet")})
     filters = "".join(
         f'<button type="button" data-filter="{escape(c)}">{escape(CATEGORY_NAMES.get(c, c))}</button>' for c in shown
     )
@@ -260,6 +260,12 @@ def render(
         if negatives
         else "The negative control hasn't run yet."
     )
+    for q in (r for r in s["rows"] if r["class"] == "quiet"):
+        alerts = ", ".join(q["noise_alerts"]) or "none"
+        noise += (
+            f" The quiet test, an hour of normal work with no fault, ran {plural(q['valid'], 'valid time')} on "
+            f"{lab_name(q['lab'])}: {q['outcome']}. Alerts delivered as noise: {alerts}."
+        )
     method = link(repo_url, "docs/method-v0.2.md", "how five trials become one row")
     method_v0 = link(repo_url, "docs/method-v0.md", "how one trial works")
     method_v03 = link(repo_url, "docs/method-v0.3.md", "how node faults run on VMs")
@@ -374,7 +380,7 @@ runs from the harm starting to that delivery.</p>
 </div>
 
 <h2>False alarms</h2>
-<p>{escape(noise)} A longer quiet test, which counts every alert raised during normal work, isn't built yet.</p>
+<p>{escape(noise)}</p>
 
 <h2>History</h2>
 <div class="table-wrap">

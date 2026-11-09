@@ -473,3 +473,76 @@ def test_the_score_says_how_many_watcher_reads_worked():
     obs.watcher.extend([{"t": 900, "ok": True}, {"t": 1010, "ok": True}, {"t": 1025, "ok": False}])
     result = scoring.score(fault, obs, 1000.0, 1050.0)
     assert result["watcher_reads_after_t0"] == {"ok": 1, "failed": 1}
+
+
+# --- The quiet test --------------------------------------------------------------------------------------
+
+
+def test_the_quiet_test_file_is_valid_and_never_a_fault():
+    from blindspot import catalog
+
+    root = __import__("pathlib").Path(__file__).resolve().parents[1]
+    quiet = catalog.load(root / "faults")["normal-hour"]
+    assert quiet.fault_class == "quiet" and quiet.harm is None and quiet.window_minutes == 60
+    assert quiet.is_relevant({"alertname": "KubeNodeNotReady"})
+    assert not quiet.is_relevant({"alertname": "Watchdog"})
+
+
+def test_quiet_noise_ignores_watchdog_and_baseline_and_harm_makes_it_invalid():
+    from blindspot.runner import quiet_result
+
+    result = {
+        "delivered_after_t0": ["Watchdog", "KubeJobFailed", "TargetDown"],
+        "firing_after_t0": ["KubeJobFailed", "TargetDown"],
+        "baseline_alerts": ["TargetDown"],
+        "probe_timeline": [
+            {"minute": -1, "web": {"n": 100, "failed": 50}},
+            {"minute": 0, "web": {"n": 100, "failed": 0}},
+        ],
+    }
+    assert quiet_result(result) == {"noise": {"delivered": ["KubeJobFailed"], "fired": ["KubeJobFailed"]}}
+    result["probe_timeline"].append({"minute": 7, "web": {"n": 100, "failed": 9}})
+    assert quiet_result(result)["status"] == "invalid: harm"
+
+
+def test_quiet_rows_report_noise_and_stay_out_of_the_headline():
+    trials = [
+        {
+            "fault": "normal-hour",
+            "class": "quiet",
+            "trial": i,
+            "status": "valid",
+            "outcome": "missed",
+            "noise": {"delivered": [], "fired": []},
+            "number": 0,
+            "name": "quiet",
+        }
+        for i in range(1, 6)
+    ]
+    trials[2]["noise"] = {"delivered": ["KubeJobFailed"], "fired": ["KubeJobFailed"]}
+    trials[2]["outcome"] = "caught"
+    s = summary.summarise(trials)
+    row = s["rows"][0]
+    assert row["outcome"] == "noisy in 1 of 5"
+    assert row["noise_alerts"] == {"KubeJobFailed": 1}
+    assert (s["caught"], s["of"]) == (0, 0)
+
+
+def test_normal_operations_logs_each_step_and_stops_on_undo(monkeypatch):
+    import time as clock
+
+    from blindspot import injectors
+
+    done = []
+    monkeypatch.setattr(
+        injectors, "SCHEDULE", [(0, "first", lambda: done.append(1)), (60, "much later", lambda: done.append(2))]
+    )
+    monkeypatch.setattr(injectors, "kubectl", lambda *a, **k: None)
+    state = injectors.normal_operations({})
+    for _ in range(50):
+        if state["log"]:
+            break
+        clock.sleep(0.02)
+    injectors.undo_normal_operations({}, state)
+    assert state["log"] == [{"minute": 0, "op": "first", "ok": True}]
+    assert done == [1]
