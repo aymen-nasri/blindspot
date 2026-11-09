@@ -37,6 +37,29 @@ def harmed_by_probes(probes: list[dict], kind: str, at: float, p95_ms: int | Non
     return bool(p95_ms and latencies and latencies[int(0.95 * (len(latencies) - 1))] > p95_ms)
 
 
+def probe_timeline(probes: list[dict], t0: float, end: float) -> list[dict]:
+    """How each probe did in each minute, from the minute before the fault to `end`.
+
+    Minute 0 starts at T0. Harm is only confirmed once, near the start, so this shows whether it lasted.
+    """
+    timeline = []
+    kinds = sorted({p["kind"] for p in probes})
+    for minute in range(-1, int((end - t0) // 60) + 1):
+        begin = t0 + 60 * minute
+        row: dict = {"minute": minute}
+        for kind in kinds:
+            window = [p for p in probes if p["kind"] == kind and begin <= p["t"] < begin + 60]
+            if window:
+                latencies = sorted(p["ms"] for p in window if p["ok"])
+                row[kind] = {
+                    "n": len(window),
+                    "failed": sum(not p["ok"] for p in window),
+                    "p95_ms": latencies[int(0.95 * (len(latencies) - 1))] if latencies else None,
+                }
+        timeline.append(row)
+    return timeline
+
+
 def baseline(obs: Observations, t0: float) -> set[str]:
     """Alerts still pending or firing when the fault began. Startup blips that resolved don't count."""
     active = {

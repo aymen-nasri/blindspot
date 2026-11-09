@@ -12,7 +12,7 @@ from blindspot import __version__, guard, lab
 from blindspot.catalog import Fault, Harm
 from blindspot.injectors import inject_all, undo_all
 from blindspot.measure import Recorder, prometheus_get
-from blindspot.scoring import harmed_by_probes, meets_expectation, score
+from blindspot.scoring import harmed_by_probes, meets_expectation, probe_timeline, score
 from blindspot.shell import log, node_ip
 
 BASELINE_S = 300
@@ -169,6 +169,10 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
             log(f"harm confirmed after {result['harm_after_t0_s']}s")
         wait_for(lambda: False, t0 + fault.window_minutes * 60, every=15)
         now_started = prometheus_started()
+        if fault.harm:
+            # Recorded, not scored: whether harm was still there at the end, and how it went minute by minute.
+            result["harmed_at_end"] = harmed(fault.harm, recorder, time.time())
+            result["probe_timeline"] = probe_timeline(recorder.snapshot().probes, t0, time.time())
         # Prometheus keeps waiting timers across a restart unless its data was lost, so a restart is noted, not fatal.
         result["prometheus_restarted"] = None if not (started and now_started) else started != now_started
         result.update(

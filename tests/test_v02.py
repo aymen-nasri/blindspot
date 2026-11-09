@@ -182,3 +182,15 @@ def test_the_page_reads_old_one_trial_runs_by_their_own_plan(tmp_path):
     page = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "https://example.invalid/r/blob/main/results/" in page
     assert "<script>alert" not in page
+
+
+def test_the_probe_timeline_shows_harm_fading():
+    from blindspot.scoring import probe_timeline
+
+    t0 = 1000.0
+    probes = [{"t": t0 + i, "kind": "web", "ok": i >= 120, "ms": 900 if i < 120 else 20} for i in range(-60, 180)]
+    timeline = probe_timeline(probes, t0, t0 + 180)
+    assert [row["minute"] for row in timeline] == [-1, 0, 1, 2, 3]
+    assert timeline[0]["web"] == {"n": 60, "failed": 60, "p95_ms": None}
+    assert timeline[3]["web"] == {"n": 60, "failed": 0, "p95_ms": 20}
+    assert "web" not in timeline[4]
