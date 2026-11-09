@@ -32,7 +32,7 @@ cluster that users were really hurt, and records whether an alert actually reach
 | **What it found** | kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, **3 of 5 node failures on real VMs**, but **1 of 10 harder infrastructure failures**, mostly after about 16 minutes. Whenever a node failure hit the node Alertmanager ran on, alerts fired and reached nobody: 6 of 6 such trials |
 | **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · blackbox-exporter · promtool · pint · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages · Gitleaks · Trivy · CodeQL · Cosign |
 | **Evidence it works** | 235 trials with raw results in Git, 4 controls that test the tool itself on each lab (all 50 control trials passed), 152 unit tests, proposed rules checked by `promtool` and `pint` in CI, and scoring rules committed before each run |
-| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 5 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. Released as v0.5.0, signed. Nothing has run on a production cluster, and it must not |
+| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 5 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. A signed v0.5.0 release is prepared, not yet published. Nothing has run on a production cluster, and it must not |
 
 ## Table of contents
 
@@ -379,8 +379,9 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
 - **v0.5, done:** five proposed rules and synthetic probes, each passing all four gates, with runbooks.
   Together they catch the 7 faults the defaults missed, after 3 to 16 minutes, with no false alarm in
   the quiet test ([method and results](docs/method-v0.5.md)).
-- **v1.0:** v0.5.0 is the first signed release, with an SBOM. Still to do: a demo, instructions someone
-  else can follow to run one fault, and testing Alertmanager spread across nodes.
+- **v1.0:** v0.5.0, the first signed release with an SBOM, is prepared and not yet published. Still to
+  do: a demo, instructions someone else can follow to run one fault, and testing Alertmanager spread
+  across nodes.
 
 ## AI use
 
