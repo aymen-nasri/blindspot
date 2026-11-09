@@ -1,0 +1,300 @@
+{
+  "fault": "memory-pressure",
+  "trial": 4,
+  "lab": "vm",
+  "profile": "a",
+  "number": 20,
+  "name": "Node memory pressure",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T16:23:58Z",
+  "run": "42652063472",
+  "commit": "13e9ae869da0892bdfa6f7ea94df225bbb470820",
+  "receiver_url": "http://192.168.122.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker2",
+    "monitoring/kps-kube-state-metrics-dc46747f8-wtt77": "blindspot-worker2",
+    "monitoring/kps-operator-78f7865f6b-wcm4d": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-dfj8t": "blindspot-control-plane",
+    "monitoring/kps-prometheus-node-exporter-mmthj": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-n4fzx": "blindspot-worker2",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker",
+    "shop/api-6464b66d59-lv9pb": "blindspot-worker2",
+    "shop/api-6464b66d59-twnwp": "blindspot-worker2",
+    "shop/web-559dc89d8f-f672f": "blindspot-worker",
+    "shop/web-559dc89d8f-xj2k5": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "node-stress-memory",
+      "state": {
+        "node": "blindspot-worker",
+        "before": {
+          "available_kib": 3121872,
+          "oom_kills": 0
+        },
+        "after_30s": {
+          "available_kib": 2164348,
+          "oom_kills": 0
+        }
+      }
+    }
+  ],
+  "status": "invalid: no harm",
+  "outcome": "missed",
+  "first_relevant_alert": null,
+  "seconds_after_harm": null,
+  "time_band": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 536,
+  "watchdog_deliveries_after_t0": 5,
+  "watcher_reads_after_t0": {
+    "ok": 40,
+    "failed": 0
+  },
+  "probe_timeline": [
+    {
+      "minute": -1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 154
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 66
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 33
+      }
+    },
+    {
+      "minute": 0,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 161
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 79
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 49
+      }
+    },
+    {
+      "minute": 1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 148
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 76
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 42
+      }
+    },
+    {
+      "minute": 2,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 160
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 74
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 37
+      }
+    },
+    {
+      "minute": 3,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 138
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 79
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 39
+      }
+    },
+    {
+      "minute": 4,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 162
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 75
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 43
+      }
+    },
+    {
+      "minute": 5,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 158
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 82
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 40
+      }
+    },
+    {
+      "minute": 6,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 165
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 70
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 33
+      }
+    },
+    {
+      "minute": 7,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 142
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 73
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 29
+      }
+    },
+    {
+      "minute": 8,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 190
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 65
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 33
+      }
+    },
+    {
+      "minute": 9,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 186
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 69
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 31
+      }
+    },
+    {
+      "minute": 10,
+      "big": {
+        "n": 4,
+        "failed": 0,
+        "p95_ms": 44
+      },
+      "web": {
+        "n": 4,
+        "failed": 0,
+        "p95_ms": 19
+      }
+    }
+  ],
+  "undo_errors": [],
+  "recovered_after_undo_s": 2
+}
