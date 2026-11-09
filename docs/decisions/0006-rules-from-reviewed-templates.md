@@ -1,6 +1,6 @@
 # 6. Proposed rules come from reviewed templates
 
-**Status:** accepted, planned for v0.5, not built yet.
+**Status:** accepted, built in v0.5.
 
 ## Context
 
@@ -24,3 +24,11 @@ before it's offered:
 - Writing templates is slower than generating rules, so fewer rules ship.
 - The before-and-after comparison stays fair, because the rule is tested against the same faults, with
   the same method.
+
+## Outcome
+
+Five rules are in [rules/blindspot.rules.yml](../../rules/blindspot.rules.yml), each with a runbook in
+[docs/runbooks](../runbooks), and all five passed all four gates. Together they caught the 7 faults they
+target, in 3 to 16 minutes, and the quiet test stayed silent ([method and results](../method-v0.5.md)).
+The two DNS rules passed gate 3 only after a flaw in the DNS faults themselves was fixed and logged
+before the rerun.
