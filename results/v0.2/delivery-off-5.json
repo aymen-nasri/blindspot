@@ -1,0 +1,25 @@
+{
+  "fault": "delivery-off",
+  "trial": 5,
+  "number": 0,
+  "name": "Delivery control: no receiver",
+  "class": "control",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-08T00:37:38Z",
+  "run": "42421927259",
+  "commit": "eff1f34e4c776557ca677752da4da370e81ffcff",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "status": "invalid: receiver",
+  "error": "no Watchdog delivery, so delivery can't be timed",
+  "control_passed": true
+}
