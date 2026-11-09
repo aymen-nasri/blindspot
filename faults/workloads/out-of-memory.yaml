@@ -1,0 +1,32 @@
+id: out-of-memory
+number: 2
+name: Out of memory
+class: harm
+runs_on:
+- kind
+# KubePodCrashLooping, the slowest rule naming the cause, waits 15 minutes.
+window_minutes: 30
+inject:
+- type: deployment-patch
+  params:
+    namespace: shop
+    name: web
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: web
+              resources:
+                requests:
+                  memory: 8Mi
+                limits:
+                  memory: 8Mi
+harm:
+  probe: web
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+why: A release sets a memory limit below what the app uses, so the kernel kills it on start, over and over. There's
+  no default alert for out-of-memory kills as such, only for what follows from them.

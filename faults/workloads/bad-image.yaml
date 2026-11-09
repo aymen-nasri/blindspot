@@ -1,0 +1,28 @@
+id: bad-image
+number: 3
+name: Bad image in a rollout
+class: harm
+runs_on:
+- kind
+# KubeContainerWaiting, the slowest rule naming the cause (an image that can't be pulled), waits 1 hour.
+window_minutes: 75
+inject:
+- type: deployment-patch
+  params:
+    namespace: shop
+    name: web
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: web
+              image: registry.k8s.io/blindspot/does-not-exist:1.0
+harm:
+  probe: web
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+why: A release points at an image tag that doesn't exist. The web Deployment uses Recreate, so the old pods are gone
+  before the new ones fail to pull, and the app goes down.
