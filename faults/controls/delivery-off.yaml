@@ -4,6 +4,7 @@ name: 'Delivery control: no receiver'
 class: control
 runs_on:
 - kind
+- vm
 window_minutes: 10
 delivery: 'off'
 inject: []

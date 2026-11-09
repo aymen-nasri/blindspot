@@ -4,6 +4,7 @@ name: 'Negative control: no fault, nothing caught'
 class: control
 runs_on:
 - kind
+- vm
 window_minutes: 20
 inject: []
 harm: null

@@ -1,0 +1,24 @@
+id: disk-full
+number: 17
+name: Node disk full
+class: harm
+runs_on:
+- vm
+# NodeFilesystemAlmostOutOfSpace, the slowest relevant rule that can fire, waits 30 minutes.
+window_minutes: 45
+inject:
+- type: node-fill-disk
+  params:
+    node: blindspot-worker
+    percent: 100
+harm:
+  probe: web
+  within_minutes: 10
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: NodeFilesystem.*
+- alertname: KubeNode(Pressure|Eviction|NotReady)
+why: The disk holding the kubelet's data on the web app's node fills up. The kubelet should report DiskPressure
+  and evict the app's pods, which can't come back while the node stays full.

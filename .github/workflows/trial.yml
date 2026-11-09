@@ -12,6 +12,11 @@ on:
       trials:
         description: Trials per fault, each on its own fresh cluster
         default: "1"
+      lab:
+        description: kind, or vm for real VMs (node faults)
+        type: choice
+        options: [kind, vm]
+        default: kind
 
 permissions:
   contents: read
@@ -40,7 +45,8 @@ jobs:
     needs: plan
     name: ${{ matrix.fault }} ${{ matrix.trial }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 80
+    # The longest window is 75 minutes, plus up to 15 to build the lab and 10 to wait and baseline.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       # The free plan runs 20 jobs at once. Leaving 4 free means CI and Pages never wait hours behind trials.
@@ -61,18 +67,32 @@ jobs:
           tar xzf helm.tgz linux-amd64/helm
           sudo install linux-amd64/helm /usr/local/bin/helm
 
+      - name: Let this job use KVM, and install the VM lab's tools
+        if: inputs.lab == 'vm'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo apt-get update -q
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils libvirt-daemon-system virtinst dnsmasq-base xorriso
+          python3 -m pip install --quiet ansible-core==2.21.6
+
       - name: Install BlindSpot
         run: python3 -m pip install --quiet .
 
       - name: Check before breaking anything
-        run: blindspot doctor
+        env:
+          LAB: ${{ inputs.lab }}
+        run: blindspot --lab-type "$LAB" doctor
 
       - name: Run one trial
         env:
           FAULT: ${{ matrix.fault }}
           TRIAL: ${{ matrix.trial }}
+          LAB: ${{ inputs.lab }}
         # A folder of its own, so the artifact holds this trial's result and not the committed ones.
-        run: blindspot run --fault "$FAULT" --trial "$TRIAL" --out trial-out
+        run: blindspot --lab-type "$LAB" run --fault "$FAULT" --trial "$TRIAL" --out trial-out
 
       - name: Save the result
         if: always()

@@ -1,0 +1,25 @@
+id: memory-pressure
+number: 20
+name: Node memory pressure
+class: harm
+runs_on:
+- vm
+# NodeMemoryHighUtilization, the slowest relevant rule, waits 15 minutes.
+window_minutes: 30
+inject:
+- type: node-stress-memory
+  params:
+    node: blindspot-worker
+    percent: 100
+harm:
+  probe: web
+  within_minutes: 10
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: NodeMemory.*
+- alertname: KubeNode(Pressure|Eviction|NotReady)
+- alertname: KubeletPlegDurationHigh
+why: A process outside Kubernetes holds all the free memory on the web app's node, like a leaking system daemon. The
+  kubelet should report MemoryPressure and evict pods, or the kernel kills them.

@@ -1,0 +1,23 @@
+id: inodes-used-up
+number: 18
+name: Node out of inodes
+class: harm
+runs_on:
+- vm
+# NodeFilesystemAlmostOutOfFiles and NodeFilesystemFilesFillingUp, the slowest relevant rules, wait 1 hour.
+window_minutes: 75
+inject:
+- type: node-fill-inodes
+  params:
+    node: blindspot-worker
+harm:
+  probe: web
+  within_minutes: 10
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: NodeFilesystem.*
+- alertname: KubeNode(Pressure|Eviction|NotReady)
+why: Empty files use up every inode on the web app's node, while plenty of disk space stays free. Nothing can create
+  a file, and the kubelet should evict pods for inode pressure. Space-based alerts can't see it.
