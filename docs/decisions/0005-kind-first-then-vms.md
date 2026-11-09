@@ -1,6 +1,6 @@
 # 5. kind first, real VMs for node faults
 
-**Status:** kind accepted and built. VMs planned for v0.3, not built yet.
+**Status:** accepted. kind built in v0.0, the VM lab built in v0.3.
 
 ## Context
 
@@ -21,3 +21,11 @@ never quietly faked on kind.
 - Network faults on kind still happen on a real kernel, in real network namespaces, with real `tc` and
   `iptables`. They just aren't on separate machines.
 - Every fault file says where it can run (`runs_on`), so the results never mix the two labs silently.
+
+## Outcome
+
+The VM lab runs on free 4-CPU GitHub runners: three KVM virtual machines, Kubernetes 1.37.0 through
+kubeadm, ready in about 4.5 minutes ([vmlab/](../../vmlab)). All four controls passed there, 5 of 5 each.
+Five node faults ran on it: disk full, inodes, memory pressure, the kubelet stopped, and containerd
+stopped then a crash ([results/v0.3](../../results/v0.3), [method](../method-v0.3.md)). Clock skew has
+an injector but no fault file yet, and conntrack exhaustion isn't built.
