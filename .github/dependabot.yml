@@ -1,0 +1,12 @@
+# Weekly pull requests when a pinned action or a Python dependency has a new release. Each one runs CI,
+# security and CodeQL before it can be merged.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
