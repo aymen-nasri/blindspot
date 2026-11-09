@@ -30,13 +30,20 @@ if sudo iptables -L DOCKER-USER -n >/dev/null 2>&1; then
   sudo iptables -I DOCKER-USER -i virbr0 -j ACCEPT
   sudo iptables -I DOCKER-USER -o virbr0 -j ACCEPT
 fi
+# Read virsh's output first. Piping it into `grep -q` under pipefail can fail even on a match: grep exits
+# early, and virsh dies writing into the closed pipe.
+network_active() {
+  local info
+  info=$(sudo virsh net-info default 2>/dev/null) || return 1
+  grep -Eq 'Active: +yes' <<<"$info"
+}
 # Just after install, libvirt may still be starting this network itself, so "already active" is fine here.
 sudo virsh net-start default 2>/dev/null || true
 for _ in $(seq 1 30); do
-  sudo virsh net-info default | grep -Eq 'Active: +yes' && break
+  network_active && break
   sleep 1
 done
-sudo virsh net-info default | grep -Eq 'Active: +yes' || { echo "libvirt's default network never became active"; exit 1; }
+network_active || { echo "libvirt's default network never became active"; sudo virsh net-list --all; exit 1; }
 
 [ -f "$out/id_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -f "$out/id_ed25519"
 base="$images/noble.img"
