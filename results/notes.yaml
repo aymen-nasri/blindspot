@@ -5,3 +5,16 @@ cpu-throttle: >-
   restarting in the first minute. After that, throttling made the app 15 to 100 times slower for the
   whole window, but never past the 1.5 s threshold set before the run. See
   docs/investigations/cpu-throttle.md.
+kubelet-stopped: >-
+  In 1 of 5 trials, Alertmanager ran on the node whose kubelet stopped, and nothing was delivered at
+  all after about 9 minutes, not even Watchdog. See docs/investigations/kubelet-placement.md.
+containerd-stopped: >-
+  Alertmanager happened to be on the faulted node in all 5 trials, so this row shows what happens in
+  that placement: alerts fire, and nothing is delivered after about 9 minutes. With Alertmanager
+  elsewhere, the outcome could differ. Stopping containerd alone, with no crash, did no harm in v0.3.
+  See docs/investigations/kubelet-placement.md.
+memory-pressure: >-
+  In trials 1, 4 and 5, Prometheus ran on the starved node, and about half the watcher's reads of it
+  failed, so a short-lived firing state could have been missed there. Nothing but Watchdog was
+  delivered in any trial, which the receiver records on its own. Trials 2 and 3, read in full, were
+  pending only too.

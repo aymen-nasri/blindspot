@@ -12,6 +12,8 @@
 ![VM lab](https://img.shields.io/badge/VM%20lab-QEMU%2FKVM%20%C2%B7%20cloud--init%20%C2%B7%20Ansible-EE0000?logo=ansible&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12%20%C2%B7%20Pydantic%20%C2%B7%20pytest-3776AB?logo=python&logoColor=white)
 ![CI/CD](https://img.shields.io/badge/GitHub%20Actions-70--job%20matrix%20%C2%B7%20Pages-2088FF?logo=githubactions&logoColor=white)
+![Rules](https://img.shields.io/badge/rules-promtool%20%C2%B7%20pint%20%C2%B7%20blackbox--exporter-E6522C)
+![DevSecOps](https://img.shields.io/badge/DevSecOps-Gitleaks%20%C2%B7%20Trivy%20%C2%B7%20CodeQL%20%C2%B7%20Cosign-2E7D32)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
 **[Results page](https://aymen-nasri.github.io/blindspot/)** · [Raw results](results) · [Method](docs/method-v0.2.md) · [Design decisions](docs/decisions)
@@ -27,10 +29,10 @@ cluster that users were really hurt, and records whether an alert actually reach
 | | |
 |---|---|
 | **What it does** | Injects one real failure at a time into a disposable Kubernetes cluster, confirms the harm with probes outside the cluster, and records whether the monitoring delivered an alert, fired one that reached nobody, only started waiting, or did nothing |
-| **What it found** | kube-prometheus-stack 92.22.0 with its default rules delivered an alert for **1 of 10 deliberately hard faults**, after a median of about 16 minutes. Every fault gave the same outcome in all 5 of its trials |
-| **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages |
-| **Evidence it works** | 70 trials with raw results in Git, 4 controls that test the tool itself (all 20 control trials passed), 134 unit tests, and scoring rules committed before each run |
-| **Status** | Done on kind (v0.2). The VM lab builds a real three-node cluster on a free runner, and its node faults are being tested. Nothing has run on a production cluster, and it must not |
+| **What it found** | kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, **3 of 5 node failures on real VMs**, but **1 of 10 harder infrastructure failures**, mostly after about 16 minutes. Whenever a node failure hit the node Alertmanager ran on, alerts fired and reached nobody: 6 of 6 such trials |
+| **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · blackbox-exporter · promtool · pint · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages · Gitleaks · Trivy · CodeQL · Cosign |
+| **Evidence it works** | 235 trials with raw results in Git, 4 controls that test the tool itself on each lab (all 50 control trials passed), 152 unit tests, proposed rules checked by `promtool` and `pint` in CI, and scoring rules committed before each run |
+| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 5 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. Released as [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), signed with Cosign, with an SBOM. Nothing has run on a production cluster, and it must not |
 
 ## Table of contents
 
@@ -40,6 +42,7 @@ cluster that users were really hurt, and records whether an alert actually reach
 - [How it works](#how-it-works)
 - [Quick start](#quick-start)
 - [Faults and controls](#faults-and-controls)
+- [Proposed fixes](#proposed-fixes)
 - [The VM lab](#the-vm-lab)
 - [Method and fairness](#method-and-fairness)
 - [CI/CD](#cicd)
@@ -50,10 +53,36 @@ cluster that users were really hurt, and records whether an alert actually reach
 
 ## The result
 
-kube-prometheus-stack 92.22.0 with its default rules **delivered an alert for 1 of 10 real failures**,
-after a median of about 16 minutes. Each fault ran 5 times, each time on a fresh kind cluster, and
-checks outside the cluster confirmed the harm before a trial was scored. Every fault gave the same
-outcome in all 5 of its trials, and all 20 control trials passed.
+kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, **3 of 5
+node failures on real VMs**, and **1 of 10 harder infrastructure failures**: 7 of 18 in all. Each
+fault ran 5 times, each time on a fresh cluster, and checks outside the cluster confirmed the harm
+before a trial was scored. All 50 control trials passed: 20 on kind, 20 on the VMs and 10 under the
+proposed fixes.
+
+**Common app failures** ([results/v0.4](results/v0.4), the failures the defaults are built for):
+
+| # | Failure | What the monitoring did, in 5 of 5 trials |
+|---|---|---|
+| 2 | Out of memory | **Caught.** `KubePodCrashLooping` delivered 942 to 964 s after the app went down |
+| 3 | Bad image in a rollout | **Caught.** `KubePodNotReady` delivered 930 to 971 s after |
+| 4 | All replicas unready | **Caught.** `KubePodNotReady` delivered 930 to 956 s after |
+
+**Node failures on real VMs** ([results/v0.3](results/v0.3), on a three-node kubeadm cluster of KVM
+virtual machines, each fault on the web app's node):
+
+| # | Failure | What the monitoring did |
+|---|---|---|
+| 17 | Node disk full | **Caught** in 5 of 5. `KubeDeploymentReplicasMismatch` delivered 944 to 973 s after the app was hurt |
+| 18 | Node out of inodes | **Caught** in 5 of 5. `KubeDeploymentReplicasMismatch` delivered 933 to 992 s after |
+| 22 | Kubelet stopped | **Caught** in 4 of 5. `TargetDown` delivered 596 to 601 s after. In the fifth trial, Alertmanager was on the stopped node, and nothing was delivered at all ([why](docs/investigations/kubelet-placement.md)) |
+| 20 | Node memory pressure | `NodeMemoryHighUtilization` started waiting and never fired within 30 minutes, in 5 of 5 ([results/v0.3.2](results/v0.3.2)). The app was hurt about a minute in, with free memory down to about 70 MB. The fault first did no harm in two runs, until it was sized from `MemAvailable` |
+| 23 | containerd stopped, then the app crashes | **Fired, not delivered** in 5 of 5 ([results/v0.3.1](results/v0.3.1)). `KubePodNotReady` and `KubeNodeNotReady` fired, but in every trial Alertmanager was on the broken node, and nothing was delivered after about 9 minutes ([why](docs/investigations/kubelet-placement.md)). Stopping containerd alone, even during a rollout, didn't hurt the app at all |
+
+What changed after these trials, and why, is in [docs/method-v0.3.md](docs/method-v0.3.md), written
+before the reruns.
+
+**Harder infrastructure failures** ([results/v0.2](results/v0.2), on kind, chosen because their results
+were hard to predict, and each gave the same outcome in all 5 of its trials):
 
 | # | Failure | What the monitoring did, in 5 of 5 trials |
 |---|---|---|
@@ -73,8 +102,10 @@ deliberate 15-minute wait. The chart ships no rules for CoreDNS, nothing measure
 services or large responses, `info` alerts are muted unless something more serious fires in the same
 namespace, and when the monitoring itself goes down, only something outside the cluster can tell.
 
-The negative control ran 5 times for 20 minutes with no fault, and no alert of any kind fired. So the
-defaults are quiet, at least in this small lab, but that isn't a full test for false alarms yet.
+**False alarms:** the quiet test ran an hour of normal work five times, with rolling restarts, scaling, a
+CronJob and a cordoned node, and the defaults delivered no alert at all. Two rules started their wait
+and never finished it, which is the `for` duration absorbing normal blips as designed
+([results](results/v0.4)). The 20-minute negative control was silent in all five trials too.
 
 Earlier runs, with one trial each, gave the same outcomes: [results/v0.0](results/v0.0) and
 [results/v0.1](results/v0.1).
@@ -105,22 +136,22 @@ So fault 5's row reads "throttling went unreported", not "users were hurt and no
 
 | Area | ✅ Built and measured | 🧪 Built, results pending | 📐 Planned |
 |---|---|---|---|
-| **Faults** | 10 faults on kind, 5 trials each | 5 node faults on real VMs, and 3 common app faults | The rest of the spec's 34: clock skew, conntrack, etcd, the scheduler and more |
-| **Measurement** | Outside probes, alert receiver, Prometheus watcher, minute-by-minute harm timeline | — | A quiet test: an hour of normal work, counting every alert as noise |
-| **Labs** | kind 0.33.0 | A VM lab on free runners: the cluster builds, node-fault results are running | — |
-| **Monitoring compared** | kube-prometheus-stack defaults | — | awesome-prometheus-alerts as a second setup, and the defaults plus BlindSpot's proposed rules |
-| **Fixes** | — | — | Rule templates tested with `promtool`, proven against the real fault, with runbooks |
-| **Delivery** | CI on every push, a 70-job trial matrix, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages | — | Weekly regression runs, re-testing each new chart version, Cosign-signed releases, Trivy, Gitleaks, CodeQL |
+| **Faults** | 10 faults and 3 common app faults on kind, and 5 node faults on real VMs, 5 trials each | — | The rest of the spec's 34: clock skew, conntrack, etcd, the scheduler and more |
+| **Measurement** | Outside probes, alert receiver, Prometheus watcher read through the API server, minute-by-minute harm timeline, and a quiet test for false alarms (no false alarm in 5 hours) | — | — |
+| **Labs** | kind 0.33.0, and a three-node VM lab on free runners. All four controls pass on both | — | — |
+| **Monitoring compared** | kube-prometheus-stack defaults, and the defaults plus BlindSpot's proposed fixes (Profile C) | — | awesome-prometheus-alerts as another setup |
+| **Fixes** | Five rules and synthetic probes, each passing all four gates: `promtool` and `pint`, a unit test, catching its fault in at least 4 of 5 trials, and a silent quiet test. Each has a runbook | — | Spreading Alertmanager across nodes, tested the same way. Sending findings to the rules' maintainers |
+| **Delivery** | CI on every push, a 70-job trial matrix, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages, Gitleaks, Trivy, CodeQL, Dependabot, a weekly regression that opens an issue on change, and [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0), released with an SBOM and every file signed with Cosign keyless | — | — |
 
 ## Where to look, by role
 
 | If you're hiring for… | Read | Then open |
 |---|---|---|
 | **SRE / platform engineering** | [The result](#the-result), [the CPU investigation](docs/investigations/cpu-throttle.md) | [`faults/`](faults), [`scoring.py`](src/blindspot/scoring.py), a raw trial such as [`crashloop-1.json`](results/v0.2/crashloop-1.json) |
-| **Observability** | [Method](docs/method-v0.2.md), [changes from the defaults](#changes-from-the-charts-defaults) | [`kps-values.yaml`](lab/kps-values.yaml), [`measure.py`](src/blindspot/measure.py) |
+| **Observability** | [Method](docs/method-v0.2.md), [proposed fixes](#proposed-fixes) | [`blindspot.rules.yml`](rules/blindspot.rules.yml), [its unit tests](rules/tests/blindspot.test.yml), [`runbooks/`](docs/runbooks) |
 | **Kubernetes administration** | [The VM lab](#the-vm-lab), [the network faults](faults/network) | [`vmlab/ansible/`](vmlab/ansible), [`injectors.py`](src/blindspot/injectors.py) |
 | **DevOps / CI/CD** | [CI/CD](#cicd), [design decisions](docs/decisions) | [`trial.yml`](.github/workflows/trial.yml), [`pages.yml`](.github/workflows/pages.yml) |
-| **Security** | [Safety](#safety) | [`guard.py`](src/blindspot/guard.py), [`injectors.py`](src/blindspot/injectors.py) (every command fixed in code) |
+| **Security / DevSecOps** | [Safety](#safety), [CI/CD](#cicd) | [`security.yml`](.github/workflows/security.yml), [`release.yml`](.github/workflows/release.yml), [`guard.py`](src/blindspot/guard.py) |
 
 ## How it works
 
@@ -187,23 +218,26 @@ code, so adding a fault means adding a file, and a file can't run arbitrary comm
 | # | Fault | Lab | How it's made | Status |
 |---|---|---|---|---|
 | 1 | App keeps crashing | kind | The container's command becomes `exit 1` | Measured |
-| 2 | Out of memory | kind | A memory limit of 8 MiB | Running |
-| 3 | Bad image in a rollout | kind | An image tag that doesn't exist | Running |
-| 4 | All replicas unready | kind | A readiness probe on a path that returns 404 | Running |
+| 2 | Out of memory | kind | A memory limit of 8 MiB | Measured |
+| 3 | Bad image in a rollout | kind | An image tag that doesn't exist | Measured |
+| 4 | All replicas unready | kind | A readiness probe on a path that returns 404 | Measured |
 | 5 | CPU throttled | kind | A CPU limit of 20 millicores | Measured |
 | 8 | Upstream DNS returns NXDOMAIN | kind | CoreDNS's `template` plugin, for one name | Measured |
 | 9 | DNS very slow | kind | CoreDNS's `erratic` plugin, 5 s on every lookup | Measured |
 | 10 | Packet loss | kind | `tc netem` 40% loss inside the backend's pods | Measured |
 | 11 | MTU black hole | kind | A route with MTU 1000 on the backend's node, and its ICMP feedback dropped | Measured |
 | 14 | NetworkPolicy blocks the app | kind | A policy denying all ingress to the backend | Measured |
-| 17 | Node disk full | VM | `fallocate`, then zeros until the disk is full | Testing |
-| 18 | Node out of inodes | VM | Empty files until no inodes are left | Testing |
-| 20 | Node memory pressure | VM | `stress-ng` holding the node's free memory | Testing |
-| 22 | Kubelet stopped | VM | `systemctl stop kubelet` | Testing |
-| 23 | containerd stopped | VM | `systemctl stop containerd` | Testing |
+| 17 | Node disk full | VM | `fallocate`, then zeros until the disk is full | Measured |
+| 18 | Node out of inodes | VM | Empty files until no inodes are left | Measured |
+| 20 | Node memory pressure | VM | `stress-ng` holding the node's available memory, protected from the OOM killer | Measured |
+| 22 | Kubelet stopped | VM | `systemctl stop kubelet` | Measured |
+| 23 | containerd stopped, then the app crashes | VM | `systemctl stop containerd`, then the web app's processes killed through their cgroups | Measured |
 | 25 | Admission webhook down | kind | A webhook with `failurePolicy: Fail` pointing at nothing | Measured |
 | 32 | Alertmanager down, then a crash | kind | `replicas: 0` on its custom resource, then a crash loop | Measured |
 | 33 | Prometheus down | kind | `replicas: 0` on its custom resource | Measured |
+
+The quiet test, [faults/quiet](faults/quiet), runs an hour of normal work with no fault: rolling restarts,
+scaling, a CronJob, a cordoned node. Every alert delivered is counted as a false alarm.
 
 Four controls check the tool itself, on each lab. If one fails, no result from that lab can be trusted:
 
@@ -213,6 +247,40 @@ Four controls check the tool itself, on each lab. If one fails, no result from t
 | No fault at all, for 20 minutes | nothing caught |
 | A fault that does nothing | thrown out for causing no harm |
 | No alert receiver | thrown out, never scored as missed |
+
+## Proposed fixes
+
+Finding a gap is half the job. Profile C is the chart's defaults plus BlindSpot's proposed fixes, run
+against the same faults, five trials each, judged by the same relevance lists
+([results/v0.5](results/v0.5), [results/v0.5.1](results/v0.5.1)):
+
+| Fault | Defaults | With the fixes | Rule that caught it |
+|---|---|---|---|
+| Packet loss | pending only | **Caught** 5 of 5, about 3 min | `BlindSpotAppProbeFailing`, from blackbox-exporter fetching the app inside the cluster |
+| MTU black hole | missed | **Caught** 5 of 5, about 3 min | `BlindSpotAppProbeFailing` |
+| NetworkPolicy blocks the app | missed | **Caught** 5 of 5, about 3 min | `BlindSpotAppProbeFailing` |
+| Admission webhook down | pending only | **Caught** 5 of 5, about 6 min | `KubeAPIAdmissionWebhookErrors` |
+| DNS very slow | missed | **Caught** 5 of 5, about 6 min | `CoreDNSSlowResponses`; the chart ships no CoreDNS rules |
+| Upstream DNS returns NXDOMAIN | missed | **Caught** 4 of 5, about 8 min | `CoreDNSHighNXDOMAINRate` |
+| CPU throttled | fired, muted | **Caught** 5 of 5, about 16 min | `CPUThrottlingHigh` at warning severity, which `InfoInhibitor` can't mute |
+
+The quiet test under Profile C delivered and fired nothing in five hours of normal work, and both
+controls passed 5 of 5. Two things to know:
+
+- The DNS faults were first missed 5 of 5, because the fault's own CoreDNS server block wasn't counted in
+  CoreDNS's metrics. That was a flaw in the fault, fixed and written down before the rerun
+  ([method](docs/method-v0.5.md)).
+- `CoreDNSHighNXDOMAINRate` started its wait during cluster setup, before any fault, in 7 of 60 trials.
+  The quiet test starts after setup, so it doesn't see that. Tune its threshold for your own cluster.
+
+The rules are in [rules/blindspot.rules.yml](rules/blindspot.rules.yml), and the lab loads that same file.
+A rule only counts as a fix if it passes four gates: `promtool check rules` and `pint`, its `promtool`
+unit test (both in CI on every push), catching its fault in at least 4 of 5 trials, and staying silent
+in the quiet test ([method](docs/method-v0.5.md)). Each has a [runbook](docs/runbooks). All five pass
+all four.
+
+No rule inside the cluster can catch Prometheus or Alertmanager itself going down. That needs a dead
+man's switch outside the cluster, watching for `Watchdog` to stop.
 
 ## The VM lab
 
@@ -227,7 +295,7 @@ Kubernetes 1.37.0 cluster in about 4.5 minutes:
 3. [`finish.sh`](vmlab/finish.sh) installs Flannel and waits for every node to be Ready.
 
 The nodes use the kind lab's names, and the same control-plane metrics settings, so the same app and the
-same monitoring run unchanged on both labs.
+same monitoring run unchanged on both labs. All four controls passed on it, in 5 of 5 trials each.
 
 ## Method and fairness
 
@@ -257,14 +325,19 @@ commit, saying why. Why it's built this way: [docs/decisions](docs/decisions).
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | Every push and pull request | ruff, 134 tests, fault files load, the results page builds, the VM lab's playbook parses |
+| [`ci.yml`](.github/workflows/ci.yml) | Every push and pull request | ruff, 152 tests, the proposed rules through `promtool` and `pint`, fault files load, the results page builds, the VM lab's playbook parses |
 | [`trial.yml`](.github/workflows/trial.yml) | Manual | A matrix of fault × trial, one fresh cluster per job, on kind or the VM lab, then a scored summary |
 | [`pages.yml`](.github/workflows/pages.yml) | Results change | Rebuilds the results page from `results/` and publishes it |
 | [`vmlab.yml`](.github/workflows/vmlab.yml) | Manual | Builds the VM lab on its own, as a test |
+| [`security.yml`](.github/workflows/security.yml) | Every push, and weekly | Gitleaks over every commit, and Trivy blocking on vulnerable packages and secrets |
+| [`codeql.yml`](.github/workflows/codeql.yml) | Every push, and weekly | CodeQL for the Python tool and for the workflows |
+| [`regression.yml`](.github/workflows/regression.yml) | Every Monday | Reruns the ten original faults and opens an issue if any outcome changed |
+| [`release.yml`](.github/workflows/release.yml) | A version tag, or manual | Builds the package and a CycloneDX SBOM, signs each file with Cosign keyless, and verifies the signatures |
 | [`killtest.yml`](.github/workflows/killtest.yml) | Manual | The original v0.0 test, kept so its results can be reproduced |
 
 Every action is pinned to a commit SHA, workflows get read-only permissions by default, inputs reach
-scripts through environment variables, and every download is checked against a pinned SHA-256. Trials
+scripts through environment variables, and every download is checked against a pinned SHA-256.
+Dependabot proposes updates to the pinned actions and packages every week. Trials
 can only be started by people with write access, so they never run from forks.
 
 ## Safety
@@ -278,12 +351,13 @@ someone determined to get around them, so **never point it at a cluster that mat
 
 ```text
 src/blindspot/      the tool: CLI, fault catalogue, injectors, labs, measurement, scoring, results page
-faults/             one YAML file per fault and control, by area
+faults/             one YAML file per fault, control and the quiet test, by area
+rules/              Profile C's proposed rules, and their promtool unit tests
 lab/                the kind cluster, the monitoring values, and the reference app
 vmlab/              the VM lab: up.sh, Ansible roles, finish.sh
 results/            raw results, one JSON file per trial, by version
-docs/               method for each version, design decisions, investigations
-tests/              134 tests that need no cluster
+docs/               method for each version, design decisions, runbooks, investigations
+tests/              152 tests that need no cluster
 harness/            the throwaway v0.0 harness, kept so its results can be reproduced
 .github/workflows/  CI, trials, the VM lab and the results page
 ```
@@ -295,18 +369,21 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
   guard, undo and controls.
 - **v0.2, done:** 5 trials per fault on GitHub Actions, results in Git, and the
   [results page](https://aymen-nasri.github.io/blindspot/).
-- **v0.3, in progress:** the VM lab works on free runners. Five node faults are written, with their rules
-  set in [docs/method-v0.3.md](docs/method-v0.3.md) before any ran. They have no results yet.
-- **v0.4, in progress:** three common app failures are running, with rules in
-  [docs/method-v0.4.md](docs/method-v0.4.md). Next: a quiet test for false alarms, and a second
-  monitoring setup to compare.
-- **v0.5:** proposed alert rules for each gap, each tested with `promtool`, proven against the real fault
-  in at least 4 of 5 trials, and quiet in the quiet test.
-- **v1.0:** a signed release, a demo, and instructions someone else can follow to run one fault.
+- **v0.3, done:** the VM lab works on free runners, and its controls pass. Disk full, inodes and the
+  kubelet stopping were caught. containerd, once fixed to do harm, fired but delivered nothing, because
+  Alertmanager was on the broken node. Memory pressure only ever started waiting
+  ([method and changes](docs/method-v0.3.md)).
+- **v0.4, done in part:** three common app failures, all caught in 5 of 5 trials, and the quiet test,
+  with no false alarm in five hours of normal work ([method](docs/method-v0.4.md)). Not done: a second
+  monitoring setup, and the rest of the spec's 34 faults.
+- **v0.5, done:** five proposed rules and synthetic probes, each passing all four gates, with runbooks.
+  Together they catch the 7 faults the defaults missed, after 3 to 16 minutes, with no false alarm in
+  the quiet test ([method and results](docs/method-v0.5.md)).
+- **v1.0:** [v0.5.0](https://github.com/aymen-nasri/blindspot/releases/tag/v0.5.0) is the first signed
+  release, with an SBOM; its notes show how to verify a file. Still to do: a demo, instructions someone
+  else can follow to run one fault, and testing Alertmanager spread across nodes.
 
-## AI use
 
-Built with the help of an AI coding assistant.
 
 ## License
 

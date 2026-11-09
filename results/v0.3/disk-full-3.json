@@ -1,0 +1,937 @@
+{
+  "fault": "disk-full",
+  "trial": 3,
+  "lab": "vm",
+  "number": 17,
+  "name": "Node disk full",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T13:31:45Z",
+  "run": "42626043262",
+  "commit": "8f5de4fb68d5cfdbdc19480ede7ca46a6ff06caf",
+  "receiver_url": "http://192.168.122.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker2",
+    "monitoring/kps-kube-state-metrics-dc46747f8-xkvmc": "blindspot-worker",
+    "monitoring/kps-operator-78f7865f6b-sbwmj": "blindspot-worker2",
+    "monitoring/kps-prometheus-node-exporter-b4dmg": "blindspot-control-plane",
+    "monitoring/kps-prometheus-node-exporter-v9825": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-xjzb7": "blindspot-worker2",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker",
+    "shop/api-6464b66d59-8mr56": "blindspot-worker2",
+    "shop/api-6464b66d59-rn9vq": "blindspot-worker2",
+    "shop/web-559dc89d8f-8s5dc": "blindspot-worker",
+    "shop/web-559dc89d8f-lgtrp": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "node-fill-disk",
+      "state": {
+        "node": "blindspot-worker",
+        "bytes": 15898238976
+      }
+    }
+  ],
+  "harm_after_t0_s": 17,
+  "harmed_at_end": true,
+  "probe_timeline": [
+    {
+      "minute": -1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 102
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 41
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 26
+      }
+    },
+    {
+      "minute": 0,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 121
+      },
+      "big": {
+        "n": 58,
+        "failed": 37,
+        "p95_ms": 78
+      },
+      "web": {
+        "n": 59,
+        "failed": 38,
+        "p95_ms": 37
+      }
+    },
+    {
+      "minute": 1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 2,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 39,
+        "failed": 39,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 3,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 4,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 39,
+        "failed": 39,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 5,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 40,
+        "failed": 40,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 6,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 94
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 7,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 8,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 94
+      },
+      "big": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 9,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 41,
+        "failed": 41,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 10,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 52,
+        "failed": 52,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 27,
+        "failed": 27,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 11,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 12,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 40,
+        "failed": 40,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 13,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 37,
+        "failed": 37,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 14,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 15,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 35,
+        "failed": 35,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 16,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 103
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 17,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 35,
+        "failed": 35,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 18,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 41,
+        "failed": 41,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 19,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 95
+      },
+      "big": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 20,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 21,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 95
+      },
+      "big": {
+        "n": 41,
+        "failed": 41,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 22,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 27,
+        "failed": 27,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 51,
+        "failed": 51,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 23,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 24,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 52,
+        "failed": 52,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 29,
+        "failed": 29,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 25,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 98
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 35,
+        "failed": 35,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 26,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 37,
+        "failed": 37,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 27,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 40,
+        "failed": 40,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 28,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 29,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 38,
+        "failed": 38,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 30,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 41,
+        "failed": 41,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 31,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 32,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 39,
+        "failed": 39,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 33,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 39,
+        "failed": 39,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 34,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 35,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 41,
+        "failed": 41,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 36,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 97
+      },
+      "big": {
+        "n": 35,
+        "failed": 35,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 37,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 38,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 94
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 39,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 40,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 41,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 37,
+        "failed": 37,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 42,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 97
+      },
+      "big": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 37,
+        "failed": 37,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 43,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 94
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 44,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 45,
+      "big": {
+        "n": 2,
+        "failed": 2,
+        "p95_ms": null
+      }
+    }
+  ],
+  "prometheus_restarted": true,
+  "status": "valid",
+  "window_s": 2700,
+  "outcome": "caught",
+  "first_relevant_alert": "KubeDeploymentReplicasMismatch",
+  "seconds_after_harm": 973,
+  "time_band": "within 30 min",
+  "delivered_after_t0": [
+    "KubeDaemonSetRolloutStuck",
+    "KubeDeploymentReplicasMismatch",
+    "KubeNodePressure",
+    "KubePodNotReady",
+    "Watchdog"
+  ],
+  "firing_after_t0": [
+    "InfoInhibitor",
+    "KubeDaemonSetRolloutStuck",
+    "KubeDeploymentReplicasMismatch",
+    "KubeNodePressure",
+    "KubePodNotReady"
+  ],
+  "baseline_alerts": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "Watchdog",
+    "etcdHighCommitDurations"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeProxyDown",
+    "KubeSchedulerDown",
+    "Watchdog",
+    "etcdHighCommitDurations"
+  ],
+  "watchdog_last_seen_after_t0_s": 2697,
+  "watchdog_deliveries_after_t0": 23,
+  "watcher_reads_after_t0": {
+    "ok": 178,
+    "failed": 1
+  },
+  "undo_errors": [],
+  "recovered_after_undo_s": null
+}

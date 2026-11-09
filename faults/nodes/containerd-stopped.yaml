@@ -1,6 +1,6 @@
 id: containerd-stopped
 number: 23
-name: containerd stopped, then a rollout
+name: containerd stopped, then the app crashes
 class: harm
 runs_on:
 - vm
@@ -11,17 +11,11 @@ inject:
   params:
     node: blindspot-worker
     service: containerd
-# A rollout during the outage: the old pods leave the Service, and the new ones can't start.
-- type: deployment-patch
+# The app crashes during the outage, and nothing can restart it until containerd is back.
+- type: node-kill-app
   params:
     namespace: shop
-    name: web
-    patch:
-      spec:
-        template:
-          metadata:
-            annotations:
-              blindspot/rollout: during-containerd-outage
+    app: web
 harm:
   probe: web
   within_minutes: 10
@@ -32,6 +26,7 @@ relevant:
 - alertname: KubeNode(NotReady|Unreachable)
 - alertname: Kubelet.*
 - alertname: NodeSystemdService.*
-why: The container runtime stops on the web app's node, then a routine rollout starts. Running containers keep going
-  on their own, so the outage is harmless until something needs to start. The rollout takes the old pods out of the
-  Service, and the new ones can't start until containerd is back.
+why: The container runtime stops on the web app's node, then the app crashes. Running containers keep going on their
+  own, so the outage alone is harmless, as v0.3 showed, until something needs to start. A crashed container can't be
+  restarted until containerd is back, and the kubelet, which pauses its work while the runtime is down, may not even
+  mark the pods unready.

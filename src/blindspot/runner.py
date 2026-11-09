@@ -199,6 +199,7 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
             harm_t = wait_for(lambda: harmed(fault.harm, recorder, time.time()), deadline)
             if harm_t is None:
                 result.update(status="invalid: no harm", **score(fault, recorder.snapshot(), t0, None))
+                result["probe_timeline"] = probe_timeline(recorder.snapshot().probes, t0, time.time())
                 return
             result["harm_after_t0_s"] = round(harm_t - t0)
             log(f"harm confirmed after {result['harm_after_t0_s']}s")

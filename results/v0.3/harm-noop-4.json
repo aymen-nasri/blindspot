@@ -1,0 +1,76 @@
+{
+  "fault": "harm-noop",
+  "trial": 4,
+  "lab": "vm",
+  "number": 0,
+  "name": "Harm control: a fault that does nothing",
+  "class": "control",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T15:52:21Z",
+  "run": "42626043262",
+  "commit": "8f5de4fb68d5cfdbdc19480ede7ca46a6ff06caf",
+  "receiver_url": "http://192.168.122.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker",
+    "monitoring/kps-kube-state-metrics-dc46747f8-55527": "blindspot-worker2",
+    "monitoring/kps-operator-78f7865f6b-qw6wm": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-55h8g": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-928bv": "blindspot-control-plane",
+    "monitoring/kps-prometheus-node-exporter-bdzrs": "blindspot-worker2",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker2",
+    "shop/api-6464b66d59-c45fq": "blindspot-worker2",
+    "shop/api-6464b66d59-qr4ff": "blindspot-worker2",
+    "shop/web-559dc89d8f-gm4zj": "blindspot-worker",
+    "shop/web-559dc89d8f-phkzp": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "noop",
+      "state": {}
+    }
+  ],
+  "status": "invalid: no harm",
+  "outcome": "missed",
+  "first_relevant_alert": null,
+  "seconds_after_harm": null,
+  "time_band": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeControllerManagerDown",
+    "KubeProxyDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 296,
+  "watchdog_deliveries_after_t0": 3,
+  "watcher_reads_after_t0": {
+    "ok": 20,
+    "failed": 0
+  },
+  "undo_errors": [],
+  "recovered_after_undo_s": 0,
+  "control_passed": true
+}
