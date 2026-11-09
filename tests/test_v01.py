@@ -21,7 +21,7 @@ T0, HARM = 1000.0, 1050.0
 
 
 def test_the_catalogue_has_the_ten_faults_and_four_controls():
-    real = [f for f in FAULTS.values() if f.fault_class != "control"]
+    real = [f for f in FAULTS.values() if f.fault_class != "control" and "kind" in f.runs_on]
     controls = [f for f in FAULTS.values() if f.fault_class == "control"]
     assert sorted(f.number for f in real) == [1, 5, 8, 9, 10, 11, 14, 25, 32, 33]
     assert sorted(f.expect for f in controls) == ["caught", "invalid: no harm", "invalid: receiver", "not caught"]
@@ -270,3 +270,20 @@ def test_recovery_needs_every_harm_condition_cleared(monkeypatch, gone, probe_fa
     recorder.obs.probes.extend({"t": HARM - 30 + i, "kind": "web", "ok": not probe_failing, "ms": 5} for i in range(10))
     harm = Harm(probe="web", gone="alertmanager")
     assert runner.recovered(harm, recorder, HARM) is expected
+
+
+def test_node_faults_run_only_on_vms_and_target_the_web_apps_node():
+    nodes = [f for f in FAULTS.values() if "vm" in f.runs_on and f.fault_class != "control"]
+    assert sorted(f.number for f in nodes) == [17, 18, 20, 22, 23]
+    for fault in nodes:
+        assert fault.runs_on == ["vm"]
+        assert {step.params["node"] for step in fault.inject} == {"blindspot-worker"}
+        assert fault.is_relevant({"alertname": "KubePodNotReady", "namespace": "shop"})
+        assert not fault.is_relevant({"alertname": "KubePodNotReady", "namespace": "monitoring"})
+
+
+def test_every_control_runs_on_both_labs():
+    """A lab's results can't be trusted until its controls pass there."""
+    for fault in FAULTS.values():
+        if fault.fault_class == "control":
+            assert sorted(fault.runs_on) == ["kind", "vm"], fault.id

@@ -13,7 +13,7 @@ from blindspot.catalog import Fault, Harm
 from blindspot.injectors import inject_all, undo_all
 from blindspot.measure import Recorder, prometheus_get
 from blindspot.scoring import harmed_by_probes, meets_expectation, probe_timeline, score
-from blindspot.shell import log, node_ip
+from blindspot.shell import kubectl_json, log, node_ip
 
 BASELINE_S = 300
 HARM_DEADLINE_S = 300
@@ -64,6 +64,19 @@ def timings() -> dict:
     except Exception:  # noqa: BLE001 - recorded as unknown
         found["alertmanager"] = "unknown"
     return found
+
+
+def placement() -> dict:
+    """Which node each monitoring and app pod ran on. A node fault on Prometheus's own node also blinds it."""
+    try:
+        pods = kubectl_json("get", "pods", "-A")["items"]
+    except Exception:  # noqa: BLE001 - recorded as unknown
+        return {"error": "couldn't list pods"}
+    return {
+        f"{p['metadata']['namespace']}/{p['metadata']['name']}": p["spec"].get("nodeName")
+        for p in pods
+        if p["metadata"]["namespace"] in (lab.NAMESPACE, "shop")
+    }
 
 
 def prometheus_started() -> str | None:
@@ -147,6 +160,7 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
         result["targets_down_at_t0"] = "unknown"
 
     result["timings"] = timings()
+    result["placement"] = placement()
     started = prometheus_started()
 
     t0 = time.time()
@@ -161,7 +175,8 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
     try:
         harm_t = None
         if fault.harm:
-            harm_t = wait_for(lambda: harmed(fault.harm, recorder, time.time()), t0 + HARM_DEADLINE_S)
+            deadline = t0 + (fault.harm.within_minutes * 60 if fault.harm.within_minutes else HARM_DEADLINE_S)
+            harm_t = wait_for(lambda: harmed(fault.harm, recorder, time.time()), deadline)
             if harm_t is None:
                 result.update(status="invalid: no harm", **score(fault, recorder.snapshot(), t0, None))
                 return

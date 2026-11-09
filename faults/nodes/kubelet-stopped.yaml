@@ -1,0 +1,26 @@
+id: kubelet-stopped
+number: 22
+name: Kubelet stopped
+class: harm
+runs_on:
+- vm
+# KubeNodeNotReady and KubeNodeUnreachable, the slowest relevant rules, wait 15 minutes.
+window_minutes: 30
+inject:
+- type: node-stop-service
+  params:
+    node: blindspot-worker
+    service: kubelet
+harm:
+  probe: web
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: KubeNode(NotReady|Unreachable)
+- alertname: Kubelet.*
+- alertname: TargetDown
+  labels:
+    job: kubelet|node-exporter
+why: The kubelet stops on the web app's node. Its containers keep running, but the node goes NotReady, its pods are
+  marked not ready, and traffic to them stops.

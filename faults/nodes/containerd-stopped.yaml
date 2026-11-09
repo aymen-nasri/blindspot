@@ -1,0 +1,25 @@
+id: containerd-stopped
+number: 23
+name: containerd stopped
+class: harm
+runs_on:
+- vm
+# KubeNodeNotReady, the slowest relevant rule, waits 15 minutes.
+window_minutes: 30
+inject:
+- type: node-stop-service
+  params:
+    node: blindspot-worker
+    service: containerd
+harm:
+  probe: web
+  within_minutes: 10
+relevant:
+- alertname: .*
+  labels:
+    namespace: shop
+- alertname: KubeNode(NotReady|Unreachable)
+- alertname: Kubelet.*
+- alertname: NodeSystemdService.*
+why: The container runtime stops on the web app's node. Running containers may keep going, but the kubelet loses
+  track of them, the node should go NotReady, and nothing new can start there.

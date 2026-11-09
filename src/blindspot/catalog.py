@@ -57,6 +57,8 @@ class Harm(Strict):
     probe: Literal["web", "big", "api"] | None = None
     p95_ms: int | None = Field(default=None, gt=0)
     gone: Literal["alertmanager", "prometheus"] | None = None
+    # How long the harm may take to show. Unset means the default of 5 minutes, which every v0.2 fault used.
+    within_minutes: int | None = Field(default=None, ge=1, le=20)
 
     @model_validator(mode="after")
     def _says_something(self) -> "Harm":

@@ -330,3 +330,29 @@ def test_the_inode_script_is_valid_python_and_reports_its_count(monkeypatch):
     calls = node_calls(monkeypatch, ["1310720\n"])
     assert injectors.node_fill_inodes({"node": "n"}) == {"node": "n", "files": 1310720}
     ast.parse(shlex.split(calls[0][1])[2])
+
+
+def test_a_fault_can_allow_harm_longer_to_show_and_old_faults_keep_five_minutes():
+    import yaml
+
+    from blindspot.catalog import Fault
+
+    root = __import__("pathlib").Path(__file__).resolve().parents[1]
+    doc = yaml.safe_load((root / "faults/workloads/crashloop.yaml").read_text())
+    assert Fault.model_validate(doc).harm.within_minutes is None
+    doc["harm"]["within_minutes"] = 10
+    assert Fault.model_validate(doc).harm.within_minutes == 10
+    doc["harm"]["within_minutes"] = 60
+    with pytest.raises(ValueError):
+        Fault.model_validate(doc)
+
+
+def test_placement_keeps_only_monitoring_and_app_pods(monkeypatch):
+    from blindspot import runner
+
+    def pod(ns, name, node):
+        return {"metadata": {"namespace": ns, "name": name}, "spec": {"nodeName": node}}
+
+    items = [pod("monitoring", "prometheus-kps-0", "w1"), pod("shop", "web-1", "w1"), pod("kube-system", "dns", "cp")]
+    monkeypatch.setattr(runner, "kubectl_json", lambda *a: {"items": items})
+    assert runner.placement() == {"monitoring/prometheus-kps-0": "w1", "shop/web-1": "w1"}
