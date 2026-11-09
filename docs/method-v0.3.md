@@ -77,6 +77,18 @@ during the outage, didn't hurt an app whose pods were already running.
 
 A trial that ends with no harm now also records its minute-by-minute probe timeline.
 
+### A second change to memory pressure, after its rerun
+
+The rerun (42652063472) still did no harm in any of five trials, and the new readings showed the pressure was never there. Free
+memory fell from about 3.1 to 3.3 GB to about 1.7 to 2.2 GB in the first 30 seconds, with no OOM kills. The likely reason:
+`stress-ng` sizes a percentage from memory that's free right now, leaving out the page cache the
+kernel can hand back, so "100%" never got near full.
+
+Change: the size is now read from the node's `MemAvailable`, which includes that cache, and passed to
+`stress-ng` in KiB. Memory pressure reruns five times into `results/v0.3.2`. This is the last change to
+this fault for v0.3: if it still does no harm, its result stays "not enough data" and the README says
+so.
+
 ## Controls
 
 The four controls run on the VM lab too, five times each. Every control trial on a lab must pass, or

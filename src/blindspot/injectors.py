@@ -238,19 +238,26 @@ def node_stress_memory(p: dict) -> dict:
     undoes that protection: in v0.3 no trial was harmed, and no memory alert even started its wait.
     --no-oom-adjust keeps the workers at -1000. The state records free memory and OOM kills before and
     30 seconds after, so a trial without harm shows whether the pressure was really there.
+
+    The size comes from the node's MemAvailable, which counts memory the kernel can reclaim from caches.
+    stress-ng's own percentages appear to leave that out: in the first rerun, "100%" took about 1.4 GB of the
+    3.3 GB available, the kernel reclaimed caches, and nothing was hurt.
     """
     node = _node(p)
     percent = int(p.get("percent", 90))
     if not 10 <= percent <= 100:
         raise ValueError("percent must be 10 to 100")
     before = _memory(node)
+    if not before:
+        raise RuntimeError(f"couldn't read memory on {node}")
+    size_kib = before["available_kib"] * percent // 100
     on_node(
         node,
         f"systemd-run --unit={STRESS_UNIT} -p OOMScoreAdjust=-1000 "
-        f"stress-ng --vm 1 --vm-bytes {percent}% --vm-keep --no-oom-adjust --timeout 3h",
+        f"stress-ng --vm 1 --vm-bytes {size_kib}k --vm-keep --no-oom-adjust --timeout 3h",
     )
     time.sleep(30)
-    return {"node": node, "before": before, "after_30s": _memory(node)}
+    return {"node": node, "size_kib": size_kib, "before": before, "after_30s": _memory(node)}
 
 
 def undo_node_stress_memory(_: dict, state: dict) -> None:
