@@ -4,6 +4,21 @@ name: trial
 # artifacts and a summary table, and get committed to results/ by hand afterwards.
 # Only people with write access can start it, so trials never run from forks.
 on:
+  # Also callable, so the weekly regression can reuse it.
+  workflow_call:
+    inputs:
+      faults:
+        type: string
+        required: true
+      trials:
+        type: string
+        default: "1"
+      lab:
+        type: string
+        default: kind
+      profile:
+        type: string
+        default: a
   workflow_dispatch:
     inputs:
       faults:

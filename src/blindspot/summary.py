@@ -134,6 +134,23 @@ def untrusted_labs(rows: list[dict]) -> list[str]:
     )
 
 
+def compare(new: dict, baseline: dict) -> list[str]:
+    """Faults whose outcome changed between two summaries. Not enough data on either side isn't a change."""
+    before = {(r["fault"], r["lab"], r["profile"]): r for r in baseline["rows"] if r["class"] != "control"}
+    changes = []
+    for row in new["rows"]:
+        old = before.get((row["fault"], row["lab"], row["profile"]))
+        if row["class"] == "control":
+            if not row["control_passed"]:
+                changes.append(f"{row['name']}: the control FAILED ({row['outcome']})")
+            continue
+        if old is None or "not enough data" in (row["outcome"], old["outcome"]):
+            continue
+        if row["outcome"] != old["outcome"]:
+            changes.append(f"{row['name']}: {old['outcome']} before, {row['outcome']} now ({row.get('spread', '')})")
+    return changes
+
+
 def headline(summary: dict) -> str:
     text = f"Caught {summary['caught']} of {summary['of']} faults"
     if summary["median_caught_min"] is not None:
