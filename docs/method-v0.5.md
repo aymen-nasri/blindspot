@@ -67,3 +67,29 @@ row came from: Profile A's DNS rows are from v0.2, before this change.
 - Webhook: caught after about 6 to 10 minutes, if the API server exports the webhook rejection metric
   in this version. If it doesn't, the rule can't fire, and that's reported as a failed fix.
 - The quiet test: no noise from these rules. The NXDOMAIN rule is the most likely to make some.
+
+## How the predictions did, added after the runs
+
+Runs 42628449377 (from commit 9766782, into `results/v0.5`) and 42652854871 (the DNS rerun, from
+4a76605, into `results/v0.5.1`).
+
+| Rule | Gate 3: catches its fault | Gate 4: quiet test | Prediction |
+|---|---|---|---|
+| `BlindSpotAppProbeFailing` | Packet loss, MTU and NetworkPolicy each 5 of 5, about 3 min | Silent | Right: 3 to 8 min predicted |
+| `CoreDNSHighNXDOMAINRate` | 4 of 5, about 8 min, after the rerun | Silent, with a caveat below | Right on time, after the fault was fixed |
+| `CoreDNSSlowResponses` | 5 of 5, about 6 min, after the rerun | Silent | Right on time, after the fault was fixed |
+| `CPUThrottlingHigh`, warning | 5 of 5, about 16 min | Silent | Right |
+| `KubeAPIAdmissionWebhookErrors` | 5 of 5, about 6 min | Silent | Right: the API server does export the metric |
+
+All five pass all four gates. The quiet test under Profile C delivered nothing and fired nothing in
+five hours of normal work, and both controls passed 5 of 5.
+
+The caveat: `CoreDNSHighNXDOMAINRate` started its wait during cluster setup, before any fault, in 7 of
+the 60 Profile C trials, and was still active when the fault began in 1, which is the NXDOMAIN trial
+that earned no credit. The quiet test starts after setup, so gate 4 doesn't see this. A fresh cluster
+makes many lookups that end in NXDOMAIN while its search domains expand names. Tune the 25% threshold
+or the 5-minute wait for your own cluster before relying on it.
+
+The app probe alert fired and was delivered in every DNS trial too, after about 3 minutes, but it
+doesn't name DNS, so by the relevance rules it doesn't count for the DNS faults.
+

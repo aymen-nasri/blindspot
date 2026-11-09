@@ -32,7 +32,7 @@ cluster that users were really hurt, and records whether an alert actually reach
 | **What it found** | kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, **3 of 4 node failures on real VMs** that hurt the app, but **1 of 10 harder infrastructure failures**, mostly after about 16 minutes. Whenever a node failure hit the node Alertmanager ran on, alerts fired and reached nobody: 6 of 6 such trials |
 | **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · blackbox-exporter · promtool · pint · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages · Gitleaks · Trivy · CodeQL · Cosign |
 | **Evidence it works** | 160 trials with raw results in Git, 4 controls that test the tool itself on each lab (all 40 control trials passed), 151 unit tests, proposed rules checked by `promtool` and `pint` in CI, and scoring rules committed before each run |
-| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 4 node faults (v0.3). Results still coming in: memory pressure, on its last rerun, and the proposed fixes (Profile C). Nothing has run on a production cluster, and it must not |
+| **Status** | Done on kind (v0.2), with common app faults and a quiet test (v0.4), and on real VMs for 4 node faults (v0.3). Proposed fixes measured (Profile C, v0.5): 5 rules that catch 7 faults the defaults missed. Still running: memory pressure's last rerun. Nothing has run on a production cluster, and it must not |
 
 ## Table of contents
 
@@ -138,8 +138,8 @@ So fault 5's row reads "throttling went unreported", not "users were hurt and no
 | **Faults** | 10 faults and 3 common app faults on kind, and 4 node faults on real VMs, 5 trials each | Memory pressure, on its last rerun | The rest of the spec's 34: clock skew, conntrack, etcd, the scheduler and more |
 | **Measurement** | Outside probes, alert receiver, Prometheus watcher read through the API server, minute-by-minute harm timeline, and a quiet test for false alarms (no false alarm in 5 hours) | — | — |
 | **Labs** | kind 0.33.0, and a three-node VM lab on free runners. All four controls pass on both | — | — |
-| **Monitoring compared** | kube-prometheus-stack defaults | The defaults plus BlindSpot's proposed fixes (Profile C) | awesome-prometheus-alerts as another setup |
-| **Fixes** | Five rules and synthetic probes, each passing `promtool`, `pint` and a unit test in CI, each with a runbook | Whether each catches its fault in 4 of 5 trials and stays quiet | Sending findings to the rules' maintainers |
+| **Monitoring compared** | kube-prometheus-stack defaults, and the defaults plus BlindSpot's proposed fixes (Profile C) | — | awesome-prometheus-alerts as another setup |
+| **Fixes** | Five rules and synthetic probes, each passing all four gates: `promtool` and `pint`, a unit test, catching its fault in at least 4 of 5 trials, and a silent quiet test. Each has a runbook | — | Spreading Alertmanager across nodes, tested the same way. Sending findings to the rules' maintainers |
 | **Delivery** | CI on every push, a 70-job trial matrix, actions pinned by SHA, downloads checked by hash, a results page on GitHub Pages, Gitleaks, Trivy, CodeQL, Dependabot, a weekly regression that opens an issue on change, and a release workflow that signs with Cosign | — | A first signed release, once v0.5's results are in |
 
 ## Where to look, by role
@@ -250,20 +250,33 @@ Four controls check the tool itself, on each lab. If one fails, no result from t
 ## Proposed fixes
 
 Finding a gap is half the job. Profile C is the chart's defaults plus BlindSpot's proposed fixes, run
-against the same faults, judged by the same relevance lists:
+against the same faults, five trials each, judged by the same relevance lists
+([results/v0.5](results/v0.5), [results/v0.5.1](results/v0.5.1)):
 
-| Fix | For the gap in |
-|---|---|
-| blackbox-exporter fetching the app from inside the cluster, and `BlindSpotAppProbeFailing` | Packet loss, the MTU black hole, the NetworkPolicy block |
-| `CoreDNSHighNXDOMAINRate` and `CoreDNSSlowResponses`, because the chart has no CoreDNS rules | Both DNS faults |
-| `CPUThrottlingHigh` at warning severity, which `InfoInhibitor` can't mute | CPU throttling |
-| `KubeAPIAdmissionWebhookErrors` | The broken admission webhook |
+| Fault | Defaults | With the fixes | Rule that caught it |
+|---|---|---|---|
+| Packet loss | pending only | **Caught** 5 of 5, about 3 min | `BlindSpotAppProbeFailing`, from blackbox-exporter fetching the app inside the cluster |
+| MTU black hole | missed | **Caught** 5 of 5, about 3 min | `BlindSpotAppProbeFailing` |
+| NetworkPolicy blocks the app | missed | **Caught** 5 of 5, about 3 min | `BlindSpotAppProbeFailing` |
+| Admission webhook down | pending only | **Caught** 5 of 5, about 6 min | `KubeAPIAdmissionWebhookErrors` |
+| DNS very slow | missed | **Caught** 5 of 5, about 6 min | `CoreDNSSlowResponses`; the chart ships no CoreDNS rules |
+| Upstream DNS returns NXDOMAIN | missed | **Caught** 4 of 5, about 8 min | `CoreDNSHighNXDOMAINRate` |
+| CPU throttled | fired, muted | **Caught** 5 of 5, about 16 min | `CPUThrottlingHigh` at warning severity, which `InfoInhibitor` can't mute |
+
+The quiet test under Profile C delivered and fired nothing in five hours of normal work, and both
+controls passed 5 of 5. Two things to know:
+
+- The DNS faults were first missed 5 of 5, because the fault's own CoreDNS server block wasn't counted in
+  CoreDNS's metrics. That was a flaw in the fault, fixed and written down before the rerun
+  ([method](docs/method-v0.5.md)).
+- `CoreDNSHighNXDOMAINRate` started its wait during cluster setup, before any fault, in 7 of 60 trials.
+  The quiet test starts after setup, so it doesn't see that. Tune its threshold for your own cluster.
 
 The rules are in [rules/blindspot.rules.yml](rules/blindspot.rules.yml), and the lab loads that same file.
 A rule only counts as a fix if it passes four gates: `promtool check rules` and `pint`, its `promtool`
 unit test (both in CI on every push), catching its fault in at least 4 of 5 trials, and staying silent
-in the quiet test ([method](docs/method-v0.5.md)). Each has a [runbook](docs/runbooks). The first two
-gates pass; the trials are running.
+in the quiet test ([method](docs/method-v0.5.md)). Each has a [runbook](docs/runbooks). All five pass
+all four.
 
 No rule inside the cluster can catch Prometheus or Alertmanager itself going down. That needs a dead
 man's switch outside the cluster, watching for `Watchdog` to stop.
@@ -362,8 +375,9 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
 - **v0.4, done in part:** three common app failures, all caught in 5 of 5 trials, and the quiet test,
   with no false alarm in five hours of normal work ([method](docs/method-v0.4.md)). Not done: a second
   monitoring setup, and the rest of the spec's 34 faults.
-- **v0.5, in progress:** five proposed rules and synthetic probes, passing `promtool`, `pint` and their
-  unit tests in CI, with runbooks. Their trials are running ([method](docs/method-v0.5.md)).
+- **v0.5, done:** five proposed rules and synthetic probes, each passing all four gates, with runbooks.
+  Together they catch the 7 faults the defaults missed, after 3 to 16 minutes, with no false alarm in
+  the quiet test ([method and results](docs/method-v0.5.md)).
 - **v1.0:** the signing release workflow is built; still to do: a first signed release, a demo, and
   instructions someone else can follow to run one fault.
 
