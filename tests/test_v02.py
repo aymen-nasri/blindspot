@@ -424,3 +424,52 @@ def test_controls_are_kept_apart_per_lab_and_vm_rows_need_vm_controls():
         ("positive", "kind", "v0.2"),
     ]
     assert s["untrusted_labs"] == ["vm"]
+
+
+# --- Reading Prometheus without a port-forward ------------------------------------------------------
+
+
+def test_prometheus_is_read_through_the_api_server_pod_proxy(monkeypatch):
+    from blindspot import measure
+
+    calls = []
+
+    class Done:
+        returncode, stdout, stderr = 0, '{"data": {"alerts": []}}', ""
+
+    monkeypatch.setattr(measure, "kubectl_json", lambda *a: {"items": [{"metadata": {"name": "prometheus-kps-0"}}]})
+    monkeypatch.setattr(measure, "run", lambda args, **kw: calls.append(args) or Done())
+    measure._prometheus_pod.clear()
+    assert measure.prometheus_get("/api/v1/alerts") == {"data": {"alerts": []}}
+    assert calls[0] == [
+        "kubectl",
+        "get",
+        "--raw",
+        "/api/v1/namespaces/monitoring/pods/prometheus-kps-0:9090/proxy/api/v1/alerts",
+    ]
+    measure._prometheus_pod.clear()
+
+
+def test_a_failed_read_forgets_the_pod_and_raises(monkeypatch):
+    from blindspot import measure
+
+    class Failed:
+        returncode, stdout, stderr = 1, "", "connection refused"
+
+    monkeypatch.setattr(measure, "kubectl_json", lambda *a: {"items": [{"metadata": {"name": "p-0"}}]})
+    monkeypatch.setattr(measure, "run", lambda args, **kw: Failed())
+    measure._prometheus_pod.clear()
+    with pytest.raises(RuntimeError, match="connection refused"):
+        measure.prometheus_get("/api/v1/alerts")
+    assert measure._prometheus_pod == []
+
+
+def test_the_score_says_how_many_watcher_reads_worked():
+    from blindspot import catalog, scoring
+
+    root = __import__("pathlib").Path(__file__).resolve().parents[1]
+    fault = catalog.load(root / "faults")["crashloop"]
+    obs = scoring.Observations()
+    obs.watcher.extend([{"t": 900, "ok": True}, {"t": 1010, "ok": True}, {"t": 1025, "ok": False}])
+    result = scoring.score(fault, obs, 1000.0, 1050.0)
+    assert result["watcher_reads_after_t0"] == {"ok": 1, "failed": 1}

@@ -1,16 +1,13 @@
 """Everything that measures runs outside the cluster: the alert receiver, the Prometheus watcher and the probes."""
 
 import json
-import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import urlopen
 
 from blindspot.scoring import Observations, identity
-from blindspot.shell import run
-
-PROMETHEUS_PORT = 19090
+from blindspot.shell import kubectl_json, run
 
 
 class Recorder:
@@ -59,32 +56,24 @@ class Recorder:
 
     # --- Prometheus -----------------------------------------------------------------------------
 
-    def watch_prometheus(self, service: str = "svc/kps-prometheus", namespace: str = "monitoring") -> None:
-        threading.Thread(target=self._watch, args=(service, namespace), daemon=True).start()
+    def watch_prometheus(self) -> None:
+        threading.Thread(target=self._watch, daemon=True).start()
 
-    def _watch(self, service: str, namespace: str) -> None:
-        forward = None
+    def _watch(self) -> None:
         while not self.stop.is_set():
-            if forward is None or forward.poll() is not None:
-                forward = subprocess.Popen(
-                    ["kubectl", "-n", namespace, "port-forward", service, f"{PROMETHEUS_PORT}:9090"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                self.stop.wait(3)
             try:
                 alerts = prometheus_get("/api/v1/alerts")["data"]["alerts"]
                 now = time.time()
                 with self.lock:
+                    self.obs.watcher.append({"t": now, "ok": True})
                     for alert in alerts:
                         seen = self.obs.alerts.setdefault(identity(alert["labels"]), {"labels": alert["labels"]})
                         seen.setdefault(f"{alert['state']}_t", now)
                         seen["last_seen"] = now
-            except Exception:  # noqa: BLE001, S110 - retried in 15 seconds; Prometheus may be down on purpose
-                pass
+            except Exception:  # noqa: BLE001 - recorded as a failed read; Prometheus may be down on purpose
+                with self.lock:
+                    self.obs.watcher.append({"t": time.time(), "ok": False})
             self.stop.wait(15)
-        if forward:
-            forward.terminate()
 
     # --- probes ---------------------------------------------------------------------------------
 
@@ -136,6 +125,27 @@ class Recorder:
         threading.Thread(target=loop, daemon=True).start()
 
 
-def prometheus_get(path: str) -> dict:
-    with urlopen(f"http://127.0.0.1:{PROMETHEUS_PORT}{path}", timeout=5) as response:
-        return json.load(response)
+_prometheus_pod: list[str] = []
+
+
+def prometheus_pod(namespace: str = "monitoring") -> str:
+    found = kubectl_json("-n", namespace, "get", "pods", "-l", "app.kubernetes.io/name=prometheus")["items"]
+    if not found:
+        raise RuntimeError("no Prometheus pod")
+    return found[0]["metadata"]["name"]
+
+
+def prometheus_get(path: str, namespace: str = "monitoring") -> dict:
+    """GET from Prometheus through the API server's pod proxy.
+
+    The proxy connects straight to the pod's address. A port-forward would go through the kubelet of
+    the pod's node, so stopping that kubelet, which is one of the faults, would blind the watcher.
+    """
+    if not _prometheus_pod:
+        _prometheus_pod.append(prometheus_pod(namespace))
+    raw = f"/api/v1/namespaces/{namespace}/pods/{_prometheus_pod[0]}:9090/proxy{path}"
+    done = run(["kubectl", "get", "--raw", raw], check=False, timeout=20, quiet=True)
+    if done.returncode != 0:
+        _prometheus_pod.clear()  # the pod may have been replaced; look it up again next time
+        raise RuntimeError(f"Prometheus read failed: {done.stderr.strip()[-200:]}")
+    return json.loads(done.stdout)

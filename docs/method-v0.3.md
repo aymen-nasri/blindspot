@@ -43,6 +43,22 @@ evicting pods or the node going NotReady, so they allow 10. Every v0.2 fault kee
 Which alerts count is in each file under [faults/nodes](../faults/nodes): any alert about the app's
 namespace, plus alerts that name the cause, such as `NodeFilesystem.*` for a full disk.
 
+## Changes after the smoke test, before the full run
+
+One trial of each node fault ran first, as a smoke test (run 42615901291). Its results aren't scored.
+It found four problems, fixed before the full run:
+
+| Problem | What the smoke test showed | Change |
+|---|---|---|
+| Disk full couldn't be injected | `fallocate` of exactly the free space `df` reports fails with ENOSPC | Reserve all but 32 MiB, then write zeros until full |
+| Memory pressure did no harm in 10 minutes | The kernel's OOM killer can kill `stress-ng` itself, so the pressure goes away | `stress-ng` runs with `OOMScoreAdjust=-1000`, like a protected system daemon |
+| containerd stopped did no harm in 10 minutes | The node went NotReady in 83 s, but running containers kept serving: they don't need containerd, and the kubelet's readiness probes kept passing | The fault now also starts a rollout during the outage, the realistic way it hurts: old pods leave the Service and new ones can't start |
+| The watcher could go blind | Prometheus was read through `kubectl port-forward`, which tunnels through the kubelet of Prometheus's node. With that kubelet stopped, alert states couldn't be read | Prometheus is now read through the API server's pod proxy, which connects straight to the pod. Each result also counts the watcher's good and failed reads after T0 |
+
+The kubelet-stopped smoke trial was valid but scored missed, with no deliveries after T0 except
+Watchdog. Because of the watcher problem, its pending and firing states weren't trustworthy, so it's
+rerun with the rest. No rule for judging outcomes changed.
+
 ## Controls
 
 The four controls run on the VM lab too, five times each. Every control trial on a lab must pass, or

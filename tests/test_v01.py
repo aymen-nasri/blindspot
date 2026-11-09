@@ -278,7 +278,7 @@ def test_node_faults_run_only_on_vms_and_target_the_web_apps_node():
     assert sorted(f.number for f in nodes) == [17, 18, 20, 22, 23]
     for fault in nodes:
         assert fault.runs_on == ["vm"]
-        assert {step.params["node"] for step in fault.inject} == {"blindspot-worker"}
+        assert {step.params["node"] for step in fault.inject if step.type.startswith("node-")} == {"blindspot-worker"}
         assert fault.is_relevant({"alertname": "KubePodNotReady", "namespace": "shop"})
         assert not fault.is_relevant({"alertname": "KubePodNotReady", "namespace": "monitoring"})
 

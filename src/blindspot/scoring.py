@@ -21,9 +21,12 @@ class Observations:
     events: list[dict] = field(default_factory=list)  # deliveries at the receiver
     alerts: dict[str, dict] = field(default_factory=dict)  # Prometheus's view, by identity
     probes: list[dict] = field(default_factory=list)  # harm probe results
+    watcher: list[dict] = field(default_factory=list)  # each read of Prometheus's alert list: when, and if it worked
 
     def snapshot(self) -> "Observations":
-        return Observations(list(self.events), {k: dict(v) for k, v in self.alerts.items()}, list(self.probes))
+        return Observations(
+            list(self.events), {k: dict(v) for k, v in self.alerts.items()}, list(self.probes), list(self.watcher)
+        )
 
 
 def harmed_by_probes(probes: list[dict], kind: str, at: float, p95_ms: int | None = None) -> bool:
@@ -102,6 +105,7 @@ def score(fault: Fault, obs: Observations, t0: float, harm_t: float | None) -> d
     else:
         outcome, alert, seconds = "missed", None, None
 
+    reads = [w for w in obs.watcher if w["t"] >= t0]
     watchdog_after = [e["t"] for e in obs.events if e["labels"].get("alertname") == "Watchdog" and e["t"] >= t0]
     return {
         "outcome": outcome,
@@ -124,6 +128,8 @@ def score(fault: Fault, obs: Observations, t0: float, harm_t: float | None) -> d
         ),
         "watchdog_last_seen_after_t0_s": round(max(watchdog_after) - t0) if watchdog_after else None,
         "watchdog_deliveries_after_t0": len(watchdog_after),
+        # If most reads failed, "pending only" and "missed" can't be told apart. Delivery is still measured.
+        "watcher_reads_after_t0": {"ok": sum(w["ok"] for w in reads), "failed": sum(not w["ok"] for w in reads)},
     }
 
 
