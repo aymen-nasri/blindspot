@@ -1,0 +1,649 @@
+{
+  "fault": "cpu-throttle",
+  "trial": 4,
+  "lab": "kind",
+  "profile": "c",
+  "number": 5,
+  "name": "CPU throttled",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T14:38:20Z",
+  "run": "42628449377",
+  "commit": "976678253d76d5a1e62b1b4b59ec3e69c1c609c5",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker2",
+    "monitoring/blackbox-exporter-6878db8bcc-89x4j": "blindspot-worker2",
+    "monitoring/kps-kube-state-metrics-dc46747f8-h7l9t": "blindspot-worker2",
+    "monitoring/kps-operator-78f7865f6b-qsxcp": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-8kb2j": "blindspot-control-plane",
+    "monitoring/kps-prometheus-node-exporter-r5f45": "blindspot-worker2",
+    "monitoring/kps-prometheus-node-exporter-rjq2p": "blindspot-worker",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker",
+    "shop/api-6464b66d59-jf22v": "blindspot-worker2",
+    "shop/api-6464b66d59-qp269": "blindspot-worker2",
+    "shop/web-559dc89d8f-9z66z": "blindspot-worker",
+    "shop/web-559dc89d8f-zhlz6": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "deployment-patch",
+      "state": {}
+    }
+  ],
+  "harm_after_t0_s": 45,
+  "probe_timeline": [
+    {
+      "minute": -1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 110
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 12
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 11
+      }
+    },
+    {
+      "minute": 0,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 107
+      },
+      "big": {
+        "n": 86,
+        "failed": 26,
+        "p95_ms": 14
+      },
+      "web": {
+        "n": 73,
+        "failed": 13,
+        "p95_ms": 12
+      }
+    },
+    {
+      "minute": 1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 110
+      },
+      "big": {
+        "n": 76,
+        "failed": 5,
+        "p95_ms": 1099
+      },
+      "web": {
+        "n": 77,
+        "failed": 8,
+        "p95_ms": 1100
+      }
+    },
+    {
+      "minute": 2,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 112
+      },
+      "big": {
+        "n": 91,
+        "failed": 0,
+        "p95_ms": 1001
+      },
+      "web": {
+        "n": 96,
+        "failed": 0,
+        "p95_ms": 933
+      }
+    },
+    {
+      "minute": 3,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 92,
+        "failed": 0,
+        "p95_ms": 1135
+      },
+      "web": {
+        "n": 96,
+        "failed": 0,
+        "p95_ms": 1035
+      }
+    },
+    {
+      "minute": 4,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 95,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 999
+      }
+    },
+    {
+      "minute": 5,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 96,
+        "failed": 0,
+        "p95_ms": 969
+      },
+      "web": {
+        "n": 100,
+        "failed": 0,
+        "p95_ms": 900
+      }
+    },
+    {
+      "minute": 6,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 100,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 102,
+        "failed": 0,
+        "p95_ms": 899
+      }
+    },
+    {
+      "minute": 7,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 112
+      },
+      "big": {
+        "n": 95,
+        "failed": 0,
+        "p95_ms": 1068
+      },
+      "web": {
+        "n": 100,
+        "failed": 0,
+        "p95_ms": 938
+      }
+    },
+    {
+      "minute": 8,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 106
+      },
+      "big": {
+        "n": 91,
+        "failed": 0,
+        "p95_ms": 1105
+      },
+      "web": {
+        "n": 99,
+        "failed": 0,
+        "p95_ms": 903
+      }
+    },
+    {
+      "minute": 9,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 107
+      },
+      "big": {
+        "n": 93,
+        "failed": 0,
+        "p95_ms": 1100
+      },
+      "web": {
+        "n": 100,
+        "failed": 0,
+        "p95_ms": 899
+      }
+    },
+    {
+      "minute": 10,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 92,
+        "failed": 0,
+        "p95_ms": 1065
+      },
+      "web": {
+        "n": 96,
+        "failed": 0,
+        "p95_ms": 998
+      }
+    },
+    {
+      "minute": 11,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 107
+      },
+      "big": {
+        "n": 97,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 106,
+        "failed": 0,
+        "p95_ms": 838
+      }
+    },
+    {
+      "minute": 12,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 113
+      },
+      "big": {
+        "n": 99,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 105,
+        "failed": 0,
+        "p95_ms": 800
+      }
+    },
+    {
+      "minute": 13,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 109
+      },
+      "big": {
+        "n": 102,
+        "failed": 0,
+        "p95_ms": 898
+      },
+      "web": {
+        "n": 106,
+        "failed": 0,
+        "p95_ms": 896
+      }
+    },
+    {
+      "minute": 14,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 109
+      },
+      "big": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 97,
+        "failed": 0,
+        "p95_ms": 1035
+      }
+    },
+    {
+      "minute": 15,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 112
+      },
+      "big": {
+        "n": 95,
+        "failed": 0,
+        "p95_ms": 1100
+      },
+      "web": {
+        "n": 103,
+        "failed": 0,
+        "p95_ms": 835
+      }
+    },
+    {
+      "minute": 16,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 110
+      },
+      "big": {
+        "n": 100,
+        "failed": 0,
+        "p95_ms": 905
+      },
+      "web": {
+        "n": 102,
+        "failed": 0,
+        "p95_ms": 929
+      }
+    },
+    {
+      "minute": 17,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 106
+      },
+      "big": {
+        "n": 98,
+        "failed": 0,
+        "p95_ms": 999
+      },
+      "web": {
+        "n": 103,
+        "failed": 0,
+        "p95_ms": 801
+      }
+    },
+    {
+      "minute": 18,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 111
+      },
+      "big": {
+        "n": 93,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 95,
+        "failed": 0,
+        "p95_ms": 1099
+      }
+    },
+    {
+      "minute": 19,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 114
+      },
+      "big": {
+        "n": 98,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 102,
+        "failed": 0,
+        "p95_ms": 901
+      }
+    },
+    {
+      "minute": 20,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 109
+      },
+      "big": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 1005
+      },
+      "web": {
+        "n": 102,
+        "failed": 0,
+        "p95_ms": 899
+      }
+    },
+    {
+      "minute": 21,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 95,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 97,
+        "failed": 0,
+        "p95_ms": 966
+      }
+    },
+    {
+      "minute": 22,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 114
+      },
+      "big": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 964
+      },
+      "web": {
+        "n": 101,
+        "failed": 0,
+        "p95_ms": 900
+      }
+    },
+    {
+      "minute": 23,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 106
+      },
+      "big": {
+        "n": 93,
+        "failed": 0,
+        "p95_ms": 1099
+      },
+      "web": {
+        "n": 105,
+        "failed": 0,
+        "p95_ms": 798
+      }
+    },
+    {
+      "minute": 24,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 112
+      },
+      "big": {
+        "n": 98,
+        "failed": 0,
+        "p95_ms": 899
+      },
+      "web": {
+        "n": 99,
+        "failed": 0,
+        "p95_ms": 902
+      }
+    },
+    {
+      "minute": 25,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 112
+      },
+      "big": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 1001
+      },
+      "web": {
+        "n": 99,
+        "failed": 0,
+        "p95_ms": 961
+      }
+    },
+    {
+      "minute": 26,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 110
+      },
+      "big": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 1101
+      },
+      "web": {
+        "n": 100,
+        "failed": 0,
+        "p95_ms": 1001
+      }
+    },
+    {
+      "minute": 27,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 93,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 98,
+        "failed": 0,
+        "p95_ms": 900
+      }
+    },
+    {
+      "minute": 28,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 108
+      },
+      "big": {
+        "n": 94,
+        "failed": 0,
+        "p95_ms": 1000
+      },
+      "web": {
+        "n": 102,
+        "failed": 0,
+        "p95_ms": 868
+      }
+    },
+    {
+      "minute": 29,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 107
+      },
+      "big": {
+        "n": 93,
+        "failed": 0,
+        "p95_ms": 1001
+      },
+      "web": {
+        "n": 99,
+        "failed": 0,
+        "p95_ms": 902
+      }
+    },
+    {
+      "minute": 30
+    }
+  ],
+  "harmed_at_end": false,
+  "prometheus_restarted": false,
+  "status": "valid",
+  "window_s": 1800,
+  "outcome": "caught",
+  "first_relevant_alert": "CPUThrottlingHigh",
+  "seconds_after_harm": 970,
+  "time_band": "within 30 min",
+  "delivered_after_t0": [
+    "CPUThrottlingHigh",
+    "Watchdog"
+  ],
+  "firing_after_t0": [
+    "BlindSpotAppProbeFailing",
+    "CPUThrottlingHigh",
+    "InfoInhibitor"
+  ],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeControllerManagerDown",
+    "KubeProxyDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 1735,
+  "watchdog_deliveries_after_t0": 15,
+  "watcher_reads_after_t0": {
+    "ok": 119,
+    "failed": 0
+  },
+  "undo_errors": [],
+  "recovered_after_undo_s": 1
+}
