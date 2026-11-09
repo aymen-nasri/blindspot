@@ -1,0 +1,663 @@
+{
+  "fault": "out-of-memory",
+  "trial": 4,
+  "lab": "kind",
+  "number": 2,
+  "name": "Out of memory",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T12:26:48Z",
+  "run": "42616326752",
+  "commit": "f155f16d0f4f7e4b112873ae23aded9fcf9cc5fc",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker",
+    "monitoring/kps-kube-state-metrics-dc46747f8-mh8m4": "blindspot-worker",
+    "monitoring/kps-operator-78f7865f6b-6jxv8": "blindspot-worker2",
+    "monitoring/kps-prometheus-node-exporter-6f4ws": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-mn26n": "blindspot-worker2",
+    "monitoring/kps-prometheus-node-exporter-vpfls": "blindspot-control-plane",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker2",
+    "shop/api-6464b66d59-kwg8j": "blindspot-worker2",
+    "shop/api-6464b66d59-lx4p9": "blindspot-worker2",
+    "shop/web-559dc89d8f-f628z": "blindspot-worker",
+    "shop/web-559dc89d8f-ls6jp": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "deployment-patch",
+      "state": {}
+    }
+  ],
+  "harm_after_t0_s": 40,
+  "harmed_at_end": true,
+  "probe_timeline": [
+    {
+      "minute": -1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 0,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 84,
+        "failed": 24,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 75,
+        "failed": 15,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 82
+      },
+      "big": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 2,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 3,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 40,
+        "failed": 40,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 4,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 82
+      },
+      "big": {
+        "n": 37,
+        "failed": 37,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 5,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 6,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 7,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 38,
+        "failed": 38,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 8,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 9,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 45,
+        "failed": 45,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 10,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 34,
+        "failed": 34,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 49,
+        "failed": 49,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 11,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 12,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 13,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 35,
+        "failed": 35,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 14,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 15,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 53,
+        "failed": 53,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 29,
+        "failed": 29,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 16,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 34,
+        "failed": 34,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 17,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 49,
+        "failed": 49,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 18,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 34,
+        "failed": 34,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 49,
+        "failed": 49,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 19,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 42,
+        "failed": 42,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 20,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 38,
+        "failed": 38,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 21,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 22,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 34,
+        "failed": 34,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 49,
+        "failed": 49,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 23,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 24,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 46,
+        "failed": 46,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 25,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 44,
+        "failed": 44,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 43,
+        "failed": 43,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 26,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 83
+      },
+      "big": {
+        "n": 34,
+        "failed": 34,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 49,
+        "failed": 49,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 27,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 81
+      },
+      "big": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 36,
+        "failed": 36,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 28,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 35,
+        "failed": 35,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 48,
+        "failed": 48,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 29,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 119
+      },
+      "big": {
+        "n": 47,
+        "failed": 47,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 33,
+        "failed": 33,
+        "p95_ms": null
+      }
+    },
+    {
+      "minute": 30,
+      "api": {
+        "n": 1,
+        "failed": 0,
+        "p95_ms": 81
+      },
+      "big": {
+        "n": 5,
+        "failed": 5,
+        "p95_ms": null
+      },
+      "web": {
+        "n": 7,
+        "failed": 7,
+        "p95_ms": null
+      }
+    }
+  ],
+  "prometheus_restarted": false,
+  "status": "valid",
+  "window_s": 1800,
+  "outcome": "caught",
+  "first_relevant_alert": "KubePodCrashLooping",
+  "seconds_after_harm": 964,
+  "time_band": "within 30 min",
+  "delivered_after_t0": [
+    "KubeDeploymentReplicasMismatch",
+    "KubeDeploymentRolloutStuck",
+    "KubePodCrashLooping",
+    "KubePodNotReady",
+    "Watchdog"
+  ],
+  "firing_after_t0": [
+    "KubeDeploymentReplicasMismatch",
+    "KubeDeploymentRolloutStuck",
+    "KubePodCrashLooping",
+    "KubePodNotReady"
+  ],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "Watchdog",
+    "etcdHighCommitDurations"
+  ],
+  "watchdog_last_seen_after_t0_s": 1736,
+  "watchdog_deliveries_after_t0": 15,
+  "undo_errors": [],
+  "recovered_after_undo_s": 60
+}
