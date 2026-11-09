@@ -101,6 +101,7 @@ def run_trial(
     result: dict = {
         "fault": fault.id,
         "trial": trial,
+        "lab": lab.TYPE,
         "number": fault.number,
         "name": fault.name,
         "class": fault.fault_class,
