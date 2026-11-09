@@ -19,6 +19,7 @@ STEP_TYPES = (
     "node-fill-inodes",
     "node-stress-memory",
     "node-stop-service",
+    "node-kill-app",
     "node-clock-skew",
     "normal-operations",
 )
