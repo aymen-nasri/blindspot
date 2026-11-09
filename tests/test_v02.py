@@ -195,3 +195,138 @@ def test_the_probe_timeline_shows_harm_fading():
     assert timeline[0]["web"] == {"n": 60, "failed": 60, "p95_ms": None}
     assert timeline[3]["web"] == {"n": 60, "failed": 0, "p95_ms": 20}
     assert "web" not in timeline[4]
+
+
+# --- Reaching VM lab nodes -----------------------------------------------------------------------
+
+
+def test_node_commands_go_over_ssh_with_one_quoted_remote_line(monkeypatch):
+    from blindspot import shell
+
+    calls = []
+    monkeypatch.setattr(shell, "run", lambda args, **kw: calls.append(args))
+    nodes = shell.SshNodes(hosts={"blindspot-worker": "192.168.122.11"}, key="/k")
+    shell.use_ssh(nodes)
+    try:
+        shell.on_node("blindspot-worker", "fallocate -l 1G '/var/lib/blind spot'")
+        assert shell.node_ip("blindspot-worker") == "192.168.122.11"
+        with pytest.raises(ValueError, match="isn't a node"):
+            shell.on_node("prod-node-1", "true")
+    finally:
+        shell.use_ssh(None)
+    args = calls[0]
+    assert args[:3] == ["ssh", "-i", "/k"]
+    assert args[-2] == "blindspot@192.168.122.11"
+    assert args[-1] == "sudo sh -c 'fallocate -l 1G '\"'\"'/var/lib/blind spot'\"'\"''"
+
+
+def test_without_ssh_node_commands_use_the_kind_container(monkeypatch):
+    from blindspot import shell
+
+    calls = []
+    monkeypatch.setattr(shell, "run", lambda args, **kw: calls.append(args))
+    shell.on_node("blindspot-worker", "true")
+    assert calls == [["docker", "exec", "blindspot-worker", "sh", "-c", "true"]]
+
+
+def test_a_kind_fault_is_refused_on_the_vm_lab(capsys):
+    from pathlib import Path
+
+    from blindspot import cli, lab, shell
+
+    root = Path(__file__).resolve().parents[1]
+    code = cli.main(["--catalog", str(root / "faults"), "--lab-type", "vm", "run", "--fault", "dns-nxdomain"])
+    assert code == 2
+    assert "runs on kind, not on the vm lab" in capsys.readouterr().err
+    assert lab.TYPE == "kind" and shell._ssh is None, "the CLI must leave the process pointed back at kind"
+
+
+# --- Node faults (VM lab) ------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("used", "avail", "percent", "expected"),
+    [(20, 80, 100, 80), (20, 80, 80, 60), (90, 10, 80, 0), (0, 100, 50, 50), (50, 50, 100, 50)],
+)
+def test_fill_size_reaches_the_percent_df_reports(used, avail, percent, expected):
+    from blindspot.injectors import fill_size
+
+    assert fill_size(used, avail, percent) == expected
+
+
+class Done:
+    def __init__(self, out=""):
+        self.stdout = out
+
+
+def node_calls(monkeypatch, outputs=()):
+    from blindspot import injectors
+
+    calls, replies = [], list(outputs)
+
+    def fake(node, command, check=True):
+        calls.append((node, command))
+        return Done(replies.pop(0) if replies else "")
+
+    monkeypatch.setattr(injectors, "on_node", fake)
+    return calls
+
+
+def test_disk_fill_is_sized_from_df_and_undone_by_one_file(monkeypatch):
+    from blindspot import injectors
+
+    calls = node_calls(monkeypatch, ["1000 9000\n"])
+    state = injectors.node_fill_disk({"node": "blindspot-worker", "percent": 80})
+    assert state == {"node": "blindspot-worker", "bytes": 7000}
+    assert calls[1] == ("blindspot-worker", "fallocate -l 7000 /var/lib/blindspot-fill")
+    injectors.undo_node_fill_disk({}, state)
+    assert calls[2] == ("blindspot-worker", "rm -f /var/lib/blindspot-fill")
+
+
+def test_only_kubelet_and_containerd_can_be_stopped(monkeypatch):
+    from blindspot import injectors
+
+    calls = node_calls(monkeypatch)
+    with pytest.raises(ValueError, match="only stops kubelet, containerd"):
+        injectors.node_stop_service({"node": "blindspot-worker", "service": "sshd"})
+    assert calls == []
+
+
+def test_clock_skew_is_undone_by_the_opposite_move(monkeypatch):
+    from blindspot import injectors
+
+    calls = node_calls(monkeypatch)
+    state = injectors.node_clock_skew({"node": "blindspot-worker", "minutes": 10})
+    injectors.undo_node_clock_skew({}, state)
+    assert calls[0][1] == "timedatectl set-ntp false && date -s '+10 minutes'"
+    assert calls[1][1] == "date -s '-10 minutes' && timedatectl set-ntp true"
+
+
+@pytest.mark.parametrize(
+    ("injector", "params"),
+    [
+        ("node_clock_skew", {"node": "n", "minutes": 0}),
+        ("node_clock_skew", {"node": "n", "minutes": 500}),
+        ("node_stress_memory", {"node": "n", "percent": 5}),
+        ("node_fill_disk", {"node": "n", "percent": 0}),
+        ("node_fill_disk", {}),
+    ],
+)
+def test_node_faults_refuse_bad_settings_before_touching_a_node(monkeypatch, injector, params):
+    from blindspot import injectors
+
+    calls = node_calls(monkeypatch)
+    with pytest.raises(ValueError):
+        getattr(injectors, injector)(params)
+    assert calls == []
+
+
+def test_the_inode_script_is_valid_python_and_reports_its_count(monkeypatch):
+    import ast
+    import shlex
+
+    from blindspot import injectors
+
+    calls = node_calls(monkeypatch, ["1310720\n"])
+    assert injectors.node_fill_inodes({"node": "n"}) == {"node": "n", "files": 1310720}
+    ast.parse(shlex.split(calls[0][1])[2])

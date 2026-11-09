@@ -4,6 +4,7 @@
 """
 
 import json
+import shlex
 from collections.abc import Callable
 from typing import Any
 
@@ -147,6 +148,107 @@ def undo_scale_cr(p: dict, state: dict) -> None:
     kubectl("-n", p["namespace"], "patch", p["kind"], p["name"], "--type", "merge", "-p", patch)
 
 
+# --- node faults: for the VM lab, where a node has its own kernel and disk -------------------------
+# Every command is fixed here. A fault file only chooses the node and a size, never the command.
+
+FILL_FILE = "/var/lib/blindspot-fill"
+INODE_DIR = "/var/lib/blindspot-inodes"
+STRESS_UNIT = "blindspot-stress"
+STOPPABLE = ("kubelet", "containerd")
+INODE_SCRIPT = f"""import os
+d = {INODE_DIR!r}
+os.makedirs(d, exist_ok=True)
+n = 0
+try:
+    while True:
+        open(f"{{d}}/{{n}}", "w").close()
+        n += 1
+except OSError:
+    pass
+print(n)
+"""
+
+
+def _node(p: dict) -> str:
+    _require(p, "node")
+    return p["node"]
+
+
+def fill_size(used: int, avail: int, percent: int) -> int:
+    """Bytes to add so the filesystem reads `percent` full, as df counts it: used / (used + avail)."""
+    if not 1 <= percent <= 100:
+        raise ValueError("percent must be 1 to 100")
+    return max(0, min(avail, (used + avail) * percent // 100 - used))
+
+
+def node_fill_disk(p: dict) -> dict:
+    """Fill the filesystem holding the kubelet's data. fallocate reserves space without writing data."""
+    node = _node(p)
+    percent = int(p.get("percent", 100))
+    fill_size(0, 1, percent)  # refuse a bad percent before touching the node
+    df = on_node(node, "df --output=used,avail -B1 /var/lib/kubelet | tail -1").stdout.split()
+    size = fill_size(int(df[0]), int(df[1]), percent)
+    if size:
+        on_node(node, f"fallocate -l {size} {FILL_FILE}")
+    return {"node": node, "bytes": size}
+
+
+def undo_node_fill_disk(_: dict, state: dict) -> None:
+    on_node(state["node"], f"rm -f {FILL_FILE}")
+
+
+def node_fill_inodes(p: dict) -> dict:
+    """Create empty files until no inodes are left. Python, because a shell loop is far too slow."""
+    node = _node(p)
+    created = on_node(node, f"python3 -c {shlex.quote(INODE_SCRIPT)}").stdout.strip()
+    return {"node": node, "files": int(created or 0)}
+
+
+def undo_node_fill_inodes(_: dict, state: dict) -> None:
+    on_node(state["node"], f"rm -rf {INODE_DIR}")
+
+
+def node_stress_memory(p: dict) -> dict:
+    """Hold most of the node's free memory, like a leaking system daemon, until undone."""
+    node = _node(p)
+    percent = int(p.get("percent", 90))
+    if not 10 <= percent <= 100:
+        raise ValueError("percent must be 10 to 100")
+    on_node(node, f"systemd-run --unit={STRESS_UNIT} stress-ng --vm 1 --vm-bytes {percent}% --vm-keep --timeout 3h")
+    return {"node": node}
+
+
+def undo_node_stress_memory(_: dict, state: dict) -> None:
+    on_node(state["node"], f"systemctl stop {STRESS_UNIT}; systemctl reset-failed {STRESS_UNIT} || true")
+
+
+def node_stop_service(p: dict) -> dict:
+    node = _node(p)
+    _require(p, "service")
+    if p["service"] not in STOPPABLE:
+        raise ValueError(f"node-stop-service only stops {', '.join(STOPPABLE)}")
+    on_node(node, f"systemctl stop {p['service']}")
+    return {"node": node, "service": p["service"]}
+
+
+def undo_node_stop_service(_: dict, state: dict) -> None:
+    on_node(state["node"], f"systemctl start {state['service']}")
+
+
+def node_clock_skew(p: dict) -> dict:
+    """Stop time sync on one node and move its clock. Undone by moving it back, then syncing again."""
+    node = _node(p)
+    minutes = int(p.get("minutes", 10))
+    if not 1 <= abs(minutes) <= 120:
+        raise ValueError("minutes must be 1 to 120, ahead or behind")
+    on_node(node, f"timedatectl set-ntp false && date -s '{minutes:+d} minutes'")
+    return {"node": node, "minutes": minutes}
+
+
+def undo_node_clock_skew(_: dict, state: dict) -> None:
+    on_node(state["node"], f"date -s '{-state['minutes']:+d} minutes' && timedatectl set-ntp true")
+
+
 INJECTORS: dict[str, tuple[Callable[[dict], dict], Callable[[dict, dict], None]]] = {
     "deployment-patch": (deployment_patch, undo_deployment_patch),
     "corefile-block": (corefile_block, undo_corefile_block),
@@ -155,6 +257,11 @@ INJECTORS: dict[str, tuple[Callable[[dict], dict], Callable[[dict, dict], None]]
     "apply": (apply, undo_apply),
     "scale-cr": (scale_cr, undo_scale_cr),
     "noop": (lambda _: {}, lambda _p, _s: None),
+    "node-fill-disk": (node_fill_disk, undo_node_fill_disk),
+    "node-fill-inodes": (node_fill_inodes, undo_node_fill_inodes),
+    "node-stress-memory": (node_stress_memory, undo_node_stress_memory),
+    "node-stop-service": (node_stop_service, undo_node_stop_service),
+    "node-clock-skew": (node_clock_skew, undo_node_clock_skew),
 }
 
 
