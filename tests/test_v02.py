@@ -546,3 +546,79 @@ def test_normal_operations_logs_each_step_and_stops_on_undo(monkeypatch):
     injectors.undo_normal_operations({}, state)
     assert state["log"] == [{"minute": 0, "op": "first", "ok": True}]
     assert done == [1]
+
+
+# --- Profile C ------------------------------------------------------------------------------------------
+
+
+def test_the_proposed_rules_become_a_prometheus_rule_the_chart_loads():
+    from pathlib import Path
+
+    from blindspot import lab
+
+    root = Path(__file__).resolve().parents[1]
+    rule = lab.prometheus_rule(root / "rules" / "blindspot.rules.yml")
+    assert rule["kind"] == "PrometheusRule" and rule["metadata"]["labels"] == {"release": "kps"}
+    names = {r["alert"] for g in rule["spec"]["groups"] for r in g["rules"]}
+    assert names == {
+        "BlindSpotAppProbeFailing",
+        "CoreDNSHighNXDOMAINRate",
+        "CoreDNSSlowResponses",
+        "CPUThrottlingHigh",
+        "KubeAPIAdmissionWebhookErrors",
+    }
+    for group in rule["spec"]["groups"]:
+        for r in group["rules"]:
+            assert r["labels"]["severity"] == "warning", "info would be muted by InfoInhibitor"
+            assert r["annotations"]["runbook_url"].endswith(".md")
+
+
+def test_each_proposed_rule_counts_for_the_fault_it_was_written_for():
+    """Judged by the same relevance lists as the defaults, written before v0.0."""
+    from pathlib import Path
+
+    from blindspot import catalog
+
+    faults = catalog.load(Path(__file__).resolve().parents[1] / "faults")
+    assert faults["dns-nxdomain"].is_relevant({"alertname": "CoreDNSHighNXDOMAINRate"})
+    assert faults["dns-slow"].is_relevant({"alertname": "CoreDNSSlowResponses"})
+    for fault in ("packet-loss", "mtu-blackhole", "netpol-deny"):
+        assert faults[fault].is_relevant({"alertname": "BlindSpotAppProbeFailing", "namespace": "shop"})
+    assert faults["cpu-throttle"].is_relevant({"alertname": "CPUThrottlingHigh", "namespace": "shop"})
+    assert faults["webhook-down"].is_relevant({"alertname": "KubeAPIAdmissionWebhookErrors"})
+
+
+def test_the_runbook_for_every_proposed_rule_exists():
+    from pathlib import Path
+
+    import yaml
+
+    root = Path(__file__).resolve().parents[1]
+    groups = yaml.safe_load((root / "rules" / "blindspot.rules.yml").read_text())["groups"]
+    for group in groups:
+        for r in group["rules"]:
+            path = r["annotations"]["runbook_url"].split("/blob/main/")[1]
+            assert (root / path).is_file(), path
+
+
+def test_profile_c_rows_never_enter_the_headline():
+    rows = []
+    for profile, outcome in (("a", "missed"), ("c", "caught")):
+        rows += [
+            {
+                "fault": "dns-nxdomain",
+                "lab": "kind",
+                "profile": profile,
+                "class": "harm",
+                "trial": i,
+                "status": "valid",
+                "outcome": outcome,
+                "seconds_after_harm": 400 if outcome == "caught" else None,
+                "number": 8,
+                "name": "dns",
+            }
+            for i in range(1, 6)
+        ]
+    s = summary.summarise(rows)
+    assert (s["caught"], s["of"]) == (0, 1)
+    assert sorted(r["profile"] for r in s["rows"]) == ["a", "c"]

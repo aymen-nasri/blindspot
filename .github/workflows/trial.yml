@@ -17,6 +17,11 @@ on:
         type: choice
         options: [kind, vm]
         default: kind
+      profile:
+        description: a for the chart's defaults, c for the defaults plus BlindSpot's fixes
+        type: choice
+        options: [a, c]
+        default: a
 
 permissions:
   contents: read
@@ -91,8 +96,9 @@ jobs:
           FAULT: ${{ matrix.fault }}
           TRIAL: ${{ matrix.trial }}
           LAB: ${{ inputs.lab }}
+          PROFILE: ${{ inputs.profile }}
         # A folder of its own, so the artifact holds this trial's result and not the committed ones.
-        run: blindspot --lab-type "$LAB" run --fault "$FAULT" --trial "$TRIAL" --out trial-out
+        run: blindspot --lab-type "$LAB" --profile "$PROFILE" run --fault "$FAULT" --trial "$TRIAL" --out trial-out
 
       - name: Save the result
         if: always()

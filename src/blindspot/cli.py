@@ -110,6 +110,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lab", default="lab", help="directory with kind.yaml, kps-values.yaml and workload.yaml")
     parser.add_argument("--lab-type", choices=lab.LAB_TYPES, default="kind", help="kind, or real VMs from vmlab/")
     parser.add_argument("--vmlab", default="vmlab", help="directory with the VM lab's scripts")
+    parser.add_argument(
+        "--profile", choices=lab.PROFILES, default="a", help="a: chart defaults; c: defaults plus BlindSpot's fixes"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     faults = sub.add_parser("faults", help="list the fault catalogue")
@@ -146,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     report_parser.set_defaults(func=report_cmd)
 
     args = parser.parse_args(argv)
-    lab.use(args.lab_type, Path(args.vmlab))
+    lab.use(args.lab_type, Path(args.vmlab), args.profile)
     try:
         return args.func(args)
     finally:

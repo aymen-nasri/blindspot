@@ -192,7 +192,7 @@ code, so adding a fault means adding a file, and a file can't run arbitrary comm
 | 4 | All replicas unready | kind | A readiness probe on a path that returns 404 | Running |
 | 5 | CPU throttled | kind | A CPU limit of 20 millicores | Measured |
 | 8 | Upstream DNS returns NXDOMAIN | kind | CoreDNS's `template` plugin, for one name | Measured |
-| 9 | DNS very slow | kind | CoreDNS's `erratic` plugin, 1 to 5 s of delay | Measured |
+| 9 | DNS very slow | kind | CoreDNS's `erratic` plugin, 5 s on every lookup | Measured |
 | 10 | Packet loss | kind | `tc netem` 40% loss inside the backend's pods | Measured |
 | 11 | MTU black hole | kind | A route with MTU 1000 on the backend's node, and its ICMP feedback dropped | Measured |
 | 14 | NetworkPolicy blocks the app | kind | A policy denying all ingress to the backend | Measured |

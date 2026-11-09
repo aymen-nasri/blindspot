@@ -26,6 +26,17 @@ jobs:
         run: blindspot faults list
       - name: Results page builds
         run: blindspot report results --out site
+      - name: Proposed rules pass promtool and pint
+        run: |
+          curl -fsSLo prom.tgz https://github.com/prometheus/prometheus/releases/download/v3.16.0/prometheus-3.16.0.linux-amd64.tar.gz
+          echo "68727009472a2c02e1ff7f062fd5b3e637285bffc8fc2d340c76fb449d6e0f34  prom.tgz" | sha256sum -c
+          tar xzf prom.tgz --strip-components=1 prometheus-3.16.0.linux-amd64/promtool
+          curl -fsSLo pint.tgz https://github.com/cloudflare/pint/releases/download/v0.89.4/pint-0.89.4-linux-amd64.tar.gz
+          echo "5077e58cc66e40dc60991a3604ee62752b7377a5251cd78745fbe657d5a5ebc9  pint.tgz" | sha256sum -c
+          tar xzf pint.tgz pint-linux-amd64
+          ./promtool check rules rules/blindspot.rules.yml
+          ./promtool test rules rules/tests/blindspot.test.yml
+          ./pint-linux-amd64 lint rules/blindspot.rules.yml
       - name: VM lab playbook and scripts parse
         run: |
           (cd vmlab/ansible && ansible-playbook -i localhost, --syntax-check site.yml)

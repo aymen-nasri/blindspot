@@ -27,6 +27,7 @@ def summarise_fault(trials: list[dict], *, min_valid: int = MIN_VALID, expected:
     row = {
         "fault": first["fault"],
         "lab": first.get("lab", "kind"),
+        "profile": first.get("profile", "a"),
         "run": first.get("_run"),
         "number": first.get("number"),
         "name": first.get("name"),
@@ -89,15 +90,21 @@ def summarise(
 ) -> dict:
     """Rows for every fault, and the headline: caught K of N faults, after a median of T minutes."""
     # One row per fault and lab: a control runs on both labs, and each lab's trials are judged apart.
-    by_fault: dict[tuple[str, str], list[dict]] = {}
+    by_fault: dict[tuple[str, str, str], list[dict]] = {}
     for result in results:
-        by_fault.setdefault((result["fault"], result.get("lab", "kind")), []).append(result)
+        key = (result["fault"], result.get("lab", "kind"), result.get("profile", "a"))
+        by_fault.setdefault(key, []).append(result)
 
     rows = [summarise_fault(t, min_valid=min_valid, expected=expected_trials) for t in by_fault.values()]
-    rows.sort(key=lambda r: (r["class"] == "control", r["number"] or 0, r["lab"]))
-    absent = sorted(set(expected_faults or []) - {fault for fault, _ in by_fault})
+    rows.sort(key=lambda r: (r["class"] == "control", r["number"] or 0, r["lab"], r["profile"]))
+    absent = sorted(set(expected_faults or []) - {key[0] for key in by_fault})
 
-    real = [r for r in rows if r["class"] not in ("control", "quiet") and r["outcome"] != "not enough data"]
+    # The headline is about the chart's defaults. Profile C rows are the before-and-after, shown apart.
+    real = [
+        r
+        for r in rows
+        if r["class"] not in ("control", "quiet") and r["profile"] == "a" and r["outcome"] != "not enough data"
+    ]
     caught = [r for r in real if r["outcome"] == "caught"]
     controls = [r for r in rows if r["class"] == "control"]
     medians = [r["median_caught_s"] for r in caught if r["median_caught_s"] is not None]
