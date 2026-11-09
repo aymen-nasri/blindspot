@@ -215,12 +215,21 @@ def undo_node_fill_inodes(_: dict, state: dict) -> None:
 
 
 def node_stress_memory(p: dict) -> dict:
-    """Hold most of the node's free memory, like a leaking system daemon, until undone."""
+    """Hold most of the node's free memory, like a leaking system daemon, until undone.
+
+    OOMScoreAdjust=-1000 protects it from the kernel's OOM killer, as system daemons often are. Without
+    it, the kernel kills stress-ng first, the pressure vanishes, and the app is never hurt, as the first
+    VM trial showed.
+    """
     node = _node(p)
     percent = int(p.get("percent", 90))
     if not 10 <= percent <= 100:
         raise ValueError("percent must be 10 to 100")
-    on_node(node, f"systemd-run --unit={STRESS_UNIT} stress-ng --vm 1 --vm-bytes {percent}% --vm-keep --timeout 3h")
+    on_node(
+        node,
+        f"systemd-run --unit={STRESS_UNIT} -p OOMScoreAdjust=-1000 "
+        f"stress-ng --vm 1 --vm-bytes {percent}% --vm-keep --timeout 3h",
+    )
     return {"node": node}
 
 
