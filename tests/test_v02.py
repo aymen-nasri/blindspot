@@ -687,6 +687,8 @@ def test_memory_stress_keeps_its_oom_protection_and_records_the_pressure(monkeyp
     calls = node_calls(monkeypatch, ["4000000\n0\n", "", "90000\n2\n"])
     state = injectors.node_stress_memory({"node": "blindspot-worker", "percent": 100})
     assert "--no-oom-adjust" in calls[1][1] and "OOMScoreAdjust=-1000" in calls[1][1]
+    assert "--vm-bytes 4000000k" in calls[1][1]
+    assert state["size_kib"] == 4000000
     assert state["before"] == {"available_kib": 4000000, "oom_kills": 0}
     assert state["after_30s"] == {"available_kib": 90000, "oom_kills": 2}
 
