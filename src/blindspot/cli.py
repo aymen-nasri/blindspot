@@ -100,11 +100,7 @@ def report_cmd(args) -> int:
     data = report.build(
         Path(args.results), Path(args.catalog), Path(args.out), repo_url=args.repo_url, commit=args.commit
     )
-    latest = data["runs"][-1]
-    print(
-        f"wrote {args.out}/index.html from {len(data['runs'])} runs. {latest['name']}: "
-        + summary.headline(latest["summary"])
-    )
+    print(f"wrote {args.out}/index.html from {len(data['runs'])} runs. " + summary.headline(data["current"]))
     return 0
 
 

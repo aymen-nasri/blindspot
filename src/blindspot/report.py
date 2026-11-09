@@ -6,7 +6,7 @@ the page against the raw trials it links to.
 
 import json
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from html import escape
 from pathlib import Path
 
@@ -42,6 +42,7 @@ def load_results(directory: Path, catalog_dir: Path | None = None) -> list[dict]
             continue
         if not result.get("class") and result["fault"] in known:
             result["class"] = known[result["fault"]].fault_class
+        result.setdefault("lab", "kind")  # every result before v0.3 ran on kind
         result["_file"] = path.relative_to(directory).as_posix()
         results.append(result)
     return results
@@ -50,6 +51,32 @@ def load_results(directory: Path, catalog_dir: Path | None = None) -> list[dict]
 def version_key(path: Path) -> tuple:
     numbers = re.findall(r"\d+", path.name)
     return (tuple(int(n) for n in numbers), path.name)
+
+
+def has_enough(trials: list[dict]) -> bool:
+    if trials[0].get("class") == "control":
+        return len(trials) >= summary.MIN_VALID
+    return sum(t.get("status") == "valid" for t in trials) >= summary.MIN_VALID
+
+
+def current(runs: list[tuple[str, list[dict]]]) -> list[dict]:
+    """Each fault's trials from its most recent run with enough data, as docs/method-v0.3.md sets out.
+
+    `runs` is oldest first. A newer run without enough data doesn't replace an older one that had it.
+    A fault that never had enough data keeps its most recent run, and shows as "not enough data".
+    """
+    chosen: dict[tuple[str, str], list[dict]] = {}
+    settled: dict[tuple[str, str], bool] = {}
+    for _name, results in runs:
+        groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+        for r in results:
+            groups[(r["fault"], r.get("lab", "kind"))].append(r)
+        for key, trials in groups.items():
+            enough = has_enough(trials)
+            if enough or not settled.get(key):
+                chosen[key] = trials
+                settled[key] = settled.get(key, False) or enough
+    return [r for trials in chosen.values() for r in trials]
 
 
 def describe_run(name: str, results: list[dict]) -> dict:
@@ -74,20 +101,24 @@ def describe_run(name: str, results: list[dict]) -> dict:
 def build(results_dir: Path, catalog_dir: Path, out: Path, *, repo_url: str = "", commit: str = "") -> dict:
     faults = catalog.load(catalog_dir)
     categories = {p.stem: p.parent.name for p in catalog_dir.rglob("*.yaml")}
-    runs = []
+    runs, loaded = [], []
     for run_dir in sorted((p for p in results_dir.iterdir() if p.is_dir()), key=version_key):
         results = load_results(run_dir, catalog_dir)
+        for r in results:
+            r["_run"] = run_dir.name
         if results:
             runs.append(describe_run(run_dir.name, results))
+            loaded.append((run_dir.name, results))
     if not runs:
         raise ValueError(f"no result files under {results_dir}")
+    now = summary.summarise(current(loaded))
 
     notes_file = results_dir / "notes.yaml"
     notes = yaml.safe_load(notes_file.read_text(encoding="utf-8")) if notes_file.is_file() else {}
     out.mkdir(parents=True, exist_ok=True)
-    page = render(runs, faults, categories, repo_url=repo_url.rstrip("/"), commit=commit, notes=notes or {})
+    page = render(runs, now, faults, categories, repo_url=repo_url.rstrip("/"), commit=commit, notes=notes or {})
     (out / "index.html").write_text(page, encoding="utf-8")
-    data = {"commit": commit or None, "runs": runs}
+    data = {"commit": commit or None, "current": now, "runs": runs}
     (out / "results.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return data
 
@@ -116,9 +147,13 @@ def badge(outcome: str) -> str:
     return f'<span class="badge {kind}">{escape(outcome)}</span>'
 
 
-def fault_rows(run: dict, faults: dict, categories: dict, repo_url: str, notes: dict) -> str:
+def lab_name(lab: str) -> str:
+    return "VMs" if lab == "vm" else lab
+
+
+def fault_rows(now: dict, faults: dict, categories: dict, repo_url: str, notes: dict) -> str:
     rows = []
-    for row in run["summary"]["rows"]:
+    for row in now["rows"]:
         if row["class"] == "control":
             continue
         fault = faults.get(row["fault"])
@@ -126,7 +161,7 @@ def fault_rows(run: dict, faults: dict, categories: dict, repo_url: str, notes: 
         time_cell = f"about {row['median_caught_min']} min" if row.get("median_caught_min") is not None else "–"
         alerts = ", ".join(f"<code>{escape(a)}</code>" for a in row["first_alerts"]) or "–"
         trials = " ".join(
-            link(repo_url, f"results/{run['name']}/{f}", str(i), f"Trial {i}: raw result")
+            link(repo_url, f"results/{row['run']}/{f}", str(i), f"Trial {i}: raw result")
             for i, f in enumerate(row["files"], 1)
         )
         why = f'<div class="why">{escape(fault.why)}</div>' if fault else ""
@@ -141,15 +176,16 @@ def fault_rows(run: dict, faults: dict, categories: dict, repo_url: str, notes: 
             f"<td>{escape(row['spread'])}</td>"
             f"<td>{time_cell}</td>"
             f"<td>{alerts}</td>"
+            f"<td>{escape(row['run'] or '')}, {escape(lab_name(row['lab']))}</td>"
             f'<td class="trials">{trials}</td>'
             "</tr>"
         )
     return "\n".join(rows)
 
 
-def control_rows(run: dict, faults: dict) -> str:
+def control_rows(now: dict, faults: dict) -> str:
     rows = []
-    for row in run["summary"]["rows"]:
+    for row in now["rows"]:
         if row["class"] != "control":
             continue
         fault = faults.get(row["fault"])
@@ -157,7 +193,8 @@ def control_rows(run: dict, faults: dict) -> str:
         result = "passed" if row["control_passed"] else "failed"
         passed = row["outcome"].removeprefix("passed ")
         rows.append(
-            f"<tr><td><strong>{escape(row['name'])}</strong></td><td>{expect}</td>"
+            f"<tr><td><strong>{escape(row['name'])}</strong></td><td>{escape(lab_name(row['lab']))}</td>"
+            f"<td>{expect}</td>"
             f'<td><span class="badge {"caught" if row["control_passed"] else "missed"}">{result}</span>: '
             f"{escape(passed)} trials</td></tr>"
         )
@@ -180,35 +217,53 @@ def history_rows(runs: list[dict]) -> str:
 
 
 def render(
-    runs: list[dict], faults: dict, categories: dict, *, repo_url: str, commit: str, notes: dict | None = None
+    runs: list[dict],
+    now: dict,
+    faults: dict,
+    categories: dict,
+    *,
+    repo_url: str,
+    commit: str,
+    notes: dict | None = None,
 ) -> str:
-    latest = runs[-1]
-    s = latest["summary"]
+    s = now
+    labs = sorted({r["lab"] for r in s["rows"] if r["class"] != "control"})
+    charts = sorted({c for run in runs for c in run["charts"]})
+    where = (
+        "on a fresh cluster for every trial: kind for most faults, and real VMs for node faults"
+        if "vm" in labs
+        else "on a fresh kind cluster for every trial"
+    )
     shown = sorted({categories.get(r["fault"], "other") for r in s["rows"] if r["class"] != "control"})
     filters = "".join(
         f'<button type="button" data-filter="{escape(c)}">{escape(CATEGORY_NAMES.get(c, c))}</button>' for c in shown
     )
+    untrusted = escape(", ".join(map(lab_name, s["untrusted_labs"])))
     trust = (
-        ""
-        if s["trusted"]
-        else '<p class="warn"><strong>Not trusted:</strong> a control failed or none ran in this run, so these '
-        "numbers aren't a finding.</p>"
+        f'<p class="warn"><strong>Not trusted on {untrusted}:</strong> a control failed or did not run there, '
+        "so those rows aren't a finding yet.</p>"
+        if s["untrusted_labs"]
+        else ""
     )
     unstable = (
         f"<p>Not every trial agreed for: {escape(', '.join(s['unstable']))}. The table shows each one.</p>"
         if s["unstable"]
         else "<p>Every fault with enough data gave the same outcome in all of its valid trials.</p>"
     )
-    negative = next((r for r in s["rows"] if r["fault"] == "negative-quiet"), None)
+    negatives = [r for r in s["rows"] if r["fault"] == "negative-quiet"]
     noise = (
-        f"The negative control ran {plural(negative['trials'], 'time')}, 20 minutes each with no fault, and "
-        f"{'no alert about the app earned credit in any of them' if negative['control_passed'] else 'it FAILED'}."
-        if negative
-        else "The negative control didn't run in this run."
+        " ".join(
+            f"On {lab_name(r['lab'])}, the negative control ran {plural(r['trials'], 'time')}, 20 minutes each with "
+            f"no fault, and {'no alert about the app earned credit' if r['control_passed'] else 'it FAILED'}."
+            for r in negatives
+        )
+        if negatives
+        else "The negative control hasn't run yet."
     )
     method = link(repo_url, "docs/method-v0.2.md", "how five trials become one row")
     method_v0 = link(repo_url, "docs/method-v0.md", "how one trial works")
-    source = link(repo_url, f"results/{latest['name']}", f"results/{latest['name']}")
+    method_v03 = link(repo_url, "docs/method-v0.3.md", "how node faults run on VMs")
+    source = link(repo_url, "results", "results/")
     built_from = f"commit <code>{escape(commit[:7])}</code>" if commit else "the result files"
     repo = f'<a href="{escape(repo_url)}">Source and raw results</a>' if repo_url else ""
     median = (
@@ -279,10 +334,10 @@ footer {{ margin-top: 48px; color: var(--muted); font-size: 14px; }}
 <h1>BlindSpot</h1>
 <p class="headline">Default monitoring caught <strong>{s["caught"]} of {s["of"]}</strong>
 real Kubernetes failures{median}.</p>
-<p class="sub">kube-prometheus-stack {escape(", ".join(latest["charts"]))} with its default rules, on a fresh kind
-cluster for every trial. {plural(latest["trials_per_fault"], "trial")} per fault, run
-{escape(run_days(latest))}. Each fault was confirmed with checks outside the cluster before it was
-scored. Caught means a relevant alert reached a receiver. Time runs from the harm starting to that delivery.</p>
+<p class="sub">kube-prometheus-stack {escape(", ".join(charts))} with its default rules, {where}. Each row
+comes from its fault's most recent run with at least 3 valid trials, and says which. Each fault was confirmed
+with checks outside the cluster before it was scored. Caught means a relevant alert reached a receiver. Time
+runs from the harm starting to that delivery.</p>
 {trust}
 
 <h2>Every fault</h2>
@@ -292,9 +347,9 @@ scored. Caught means a relevant alert reached a receiver. Time runs from the har
 <div class="table-wrap">
 <table id="faults">
 <thead><tr><th>#</th><th>Failure</th><th>Area</th><th>Outcome</th><th>Every trial</th><th>Median time</th>
-<th>First relevant alert</th><th>Raw trials</th></tr></thead>
+<th>First relevant alert</th><th>Run</th><th>Raw trials</th></tr></thead>
 <tbody>
-{fault_rows(latest, faults, categories, repo_url, notes or {})}
+{fault_rows(s, faults, categories, repo_url, notes or {})}
 </tbody>
 </table>
 </div>
@@ -309,9 +364,9 @@ scored. Caught means a relevant alert reached a receiver. Time runs from the har
 <p>These check the tool itself. If one fails, no number above can be trusted.</p>
 <div class="table-wrap">
 <table>
-<thead><tr><th>Control</th><th>Must produce</th><th>Result</th></tr></thead>
+<thead><tr><th>Control</th><th>Lab</th><th>Must produce</th><th>Result</th></tr></thead>
 <tbody>
-{control_rows(latest, faults)}
+{control_rows(s, faults)}
 </tbody>
 </table>
 </div>
@@ -333,12 +388,13 @@ scored. Caught means a relevant alert reached a receiver. Time runs from the har
 
 <h2>Method and limits</h2>
 <ul>
-<li>Read {method_v0}, and {method}. Which alerts count for each fault is written in its file before it runs.</li>
+<li>Read {method_v0}, {method}, and {method_v03}. Which alerts count for each fault is written in its
+file before it runs.</li>
 <li>Everything that measures runs outside the cluster: the alert receiver, the probes and the clock.</li>
 <li>Changes from the chart's defaults are disclosed: a webhook receiver (the default sends everything to
 <code>null</code>), Watchdog sent to it every minute, control-plane metrics exposed, and Grafana off.</li>
 <li>Many default rules wait 15 minutes by design. Those count as caught, and the time shows the wait.</li>
-<li>Only kind so far. Faults that need real machines, such as full disks or clock drift, aren't measured yet.</li>
+<li>Node faults run on VMs nested inside a CI runner, so they're slower and noisier than real servers.</li>
 <li>A small reference app, not a production cluster. This shows what default rules can miss, not what any
 particular team's monitoring misses.</li>
 </ul>

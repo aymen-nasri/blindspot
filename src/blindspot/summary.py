@@ -26,6 +26,8 @@ def summarise_fault(trials: list[dict], *, min_valid: int = MIN_VALID, expected:
     counts = Counter(t["outcome"] for t in valid)
     row = {
         "fault": first["fault"],
+        "lab": first.get("lab", "kind"),
+        "run": first.get("_run"),
         "number": first.get("number"),
         "name": first.get("name"),
         "class": first.get("class"),
@@ -76,13 +78,14 @@ def summarise(
     expected_faults: list[str] | None = None,
 ) -> dict:
     """Rows for every fault, and the headline: caught K of N faults, after a median of T minutes."""
-    by_fault: dict[str, list[dict]] = {}
+    # One row per fault and lab: a control runs on both labs, and each lab's trials are judged apart.
+    by_fault: dict[tuple[str, str], list[dict]] = {}
     for result in results:
-        by_fault.setdefault(result["fault"], []).append(result)
+        by_fault.setdefault((result["fault"], result.get("lab", "kind")), []).append(result)
 
     rows = [summarise_fault(t, min_valid=min_valid, expected=expected_trials) for t in by_fault.values()]
-    rows.sort(key=lambda r: (r["class"] == "control", r["number"] or 0))
-    absent = sorted(set(expected_faults or []) - set(by_fault))
+    rows.sort(key=lambda r: (r["class"] == "control", r["number"] or 0, r["lab"]))
+    absent = sorted(set(expected_faults or []) - {fault for fault, _ in by_fault})
 
     real = [r for r in rows if r["class"] != "control" and r["outcome"] != "not enough data"]
     caught = [r for r in real if r["outcome"] == "caught"]
@@ -99,7 +102,19 @@ def summarise(
         "controls": len(controls),
         "controls_passed": sum(bool(r["control_passed"]) for r in controls),
         "trusted": bool(controls) and all(r["control_passed"] for r in controls),
+        "untrusted_labs": untrusted_labs(rows),
     }
+
+
+def untrusted_labs(rows: list[dict]) -> list[str]:
+    """Labs with fault rows whose controls didn't all pass there, or didn't run there at all."""
+    labs = {r["lab"] for r in rows if r["class"] != "control"}
+    return sorted(
+        lab
+        for lab in labs
+        if not any(r["class"] == "control" and r["lab"] == lab for r in rows)
+        or not all(r["control_passed"] for r in rows if r["class"] == "control" and r["lab"] == lab)
+    )
 
 
 def headline(summary: dict) -> str:

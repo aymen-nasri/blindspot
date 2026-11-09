@@ -356,3 +356,61 @@ def test_placement_keeps_only_monitoring_and_app_pods(monkeypatch):
     items = [pod("monitoring", "prometheus-kps-0", "w1"), pod("shop", "web-1", "w1"), pod("kube-system", "dns", "cp")]
     monkeypatch.setattr(runner, "kubectl_json", lambda *a: {"items": items})
     assert runner.placement() == {"monitoring/prometheus-kps-0": "w1", "shop/web-1": "w1"}
+
+
+# --- Which run each row comes from (v0.3) --------------------------------------------------------
+
+
+def run_of(name, fault, trials, valid=None, lab="kind", cls="harm"):
+    valid = trials if valid is None else valid
+    return [
+        {
+            "fault": fault,
+            "lab": lab,
+            "class": cls,
+            "_run": name,
+            "trial": i,
+            "status": "valid" if i <= valid else "invalid: setup",
+            "outcome": "missed",
+            "number": 8,
+            "name": fault,
+        }
+        for i in range(1, trials + 1)
+    ]
+
+
+def test_a_newer_run_with_enough_data_replaces_an_older_one():
+    from blindspot.report import current
+
+    chosen = current([("v0.1", run_of("v0.1", "dns", 1)), ("v0.2", run_of("v0.2", "dns", 5))])
+    assert {r["_run"] for r in chosen} == {"v0.2"}
+
+
+def test_a_newer_run_without_enough_data_keeps_the_older_one():
+    from blindspot.report import current
+
+    chosen = current([("v0.2", run_of("v0.2", "dns", 5)), ("smoke", run_of("smoke", "dns", 1))])
+    assert {r["_run"] for r in chosen} == {"v0.2"}
+
+
+def test_a_fault_never_measured_enough_keeps_its_latest_run():
+    from blindspot.report import current
+
+    chosen = current([("a", run_of("a", "disk", 1)), ("b", run_of("b", "disk", 5, valid=2))])
+    assert {r["_run"] for r in chosen} == {"b"}
+
+
+def test_controls_are_kept_apart_per_lab_and_vm_rows_need_vm_controls():
+    from blindspot.report import current
+
+    kind = run_of("v0.2", "positive", 5, cls="control") + run_of("v0.2", "dns", 5)
+    vm = run_of("v0.3", "disk", 5, lab="vm")
+    for r in kind:
+        r["control_passed"] = True
+    s = summary.summarise(current([("v0.2", kind), ("v0.3", vm)]))
+    assert [(r["fault"], r["lab"], r["run"]) for r in s["rows"]] == [
+        ("dns", "kind", "v0.2"),
+        ("disk", "vm", "v0.3"),
+        ("positive", "kind", "v0.2"),
+    ]
+    assert s["untrusted_labs"] == ["vm"]
