@@ -1,0 +1,84 @@
+{
+  "fault": "containerd-stopped",
+  "trial": 5,
+  "lab": "vm",
+  "number": 23,
+  "name": "containerd stopped, then a rollout",
+  "class": "harm",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T15:11:01Z",
+  "run": "42626043262",
+  "commit": "8f5de4fb68d5cfdbdc19480ede7ca46a6ff06caf",
+  "receiver_url": "http://192.168.122.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker2",
+    "monitoring/kps-kube-state-metrics-dc46747f8-d77x8": "blindspot-worker",
+    "monitoring/kps-operator-78f7865f6b-jv2wn": "blindspot-worker2",
+    "monitoring/kps-prometheus-node-exporter-mhj29": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-tjx8m": "blindspot-control-plane",
+    "monitoring/kps-prometheus-node-exporter-z7knc": "blindspot-worker2",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker",
+    "shop/api-6464b66d59-4ktlr": "blindspot-worker2",
+    "shop/api-6464b66d59-mrtgr": "blindspot-worker2",
+    "shop/web-559dc89d8f-bqc5h": "blindspot-worker",
+    "shop/web-559dc89d8f-d7kqt": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "node-stop-service",
+      "state": {
+        "node": "blindspot-worker",
+        "service": "containerd"
+      }
+    },
+    {
+      "type": "deployment-patch",
+      "state": {}
+    }
+  ],
+  "status": "invalid: no harm",
+  "outcome": "pending only",
+  "first_relevant_alert": "KubeNodeNotReady",
+  "seconds_after_harm": 97,
+  "time_band": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeProxyDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 537,
+  "watchdog_deliveries_after_t0": 5,
+  "watcher_reads_after_t0": {
+    "ok": 40,
+    "failed": 0
+  },
+  "undo_errors": [
+    "deployment-patch: exit 1: kubectl -n shop rollout undo deployment/web: Warning: resource deployments/web was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.\nerror: no rollout history found for deployment \"web\""
+  ],
+  "recovered_after_undo_s": 2
+}
