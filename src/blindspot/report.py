@@ -10,6 +10,8 @@ from collections import Counter
 from html import escape
 from pathlib import Path
 
+import yaml
+
 from blindspot import catalog, summary
 
 BADGES = {
@@ -80,8 +82,10 @@ def build(results_dir: Path, catalog_dir: Path, out: Path, *, repo_url: str = ""
     if not runs:
         raise ValueError(f"no result files under {results_dir}")
 
+    notes_file = results_dir / "notes.yaml"
+    notes = yaml.safe_load(notes_file.read_text(encoding="utf-8")) if notes_file.is_file() else {}
     out.mkdir(parents=True, exist_ok=True)
-    page = render(runs, faults, categories, repo_url=repo_url.rstrip("/"), commit=commit)
+    page = render(runs, faults, categories, repo_url=repo_url.rstrip("/"), commit=commit, notes=notes or {})
     (out / "index.html").write_text(page, encoding="utf-8")
     data = {"commit": commit or None, "runs": runs}
     (out / "results.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -97,6 +101,12 @@ def link(repo_url: str, path: str, text: str, title: str = "") -> str:
     return f'<a href="{escape(href)}"{title_attr}>{escape(text)}</a>'
 
 
+def run_days(run: dict) -> str:
+    if not run["first_day"]:
+        return "not recorded"
+    return run["first_day"] if run["first_day"] == run["last_day"] else f"{run['first_day']} to {run['last_day']}"
+
+
 def plural(n: int, word: str) -> str:
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
 
@@ -106,7 +116,7 @@ def badge(outcome: str) -> str:
     return f'<span class="badge {kind}">{escape(outcome)}</span>'
 
 
-def fault_rows(run: dict, faults: dict, categories: dict, repo_url: str) -> str:
+def fault_rows(run: dict, faults: dict, categories: dict, repo_url: str, notes: dict) -> str:
     rows = []
     for row in run["summary"]["rows"]:
         if row["class"] == "control":
@@ -120,6 +130,8 @@ def fault_rows(run: dict, faults: dict, categories: dict, repo_url: str) -> str:
             for i, f in enumerate(row["files"], 1)
         )
         why = f'<div class="why">{escape(fault.why)}</div>' if fault else ""
+        if row["fault"] in notes:
+            why += f'<div class="note"><strong>Note:</strong> {escape(notes[row["fault"]])}</div>'
         rows.append(
             f'<tr data-category="{escape(category)}">'
             f'<td class="num">{row["number"]}</td>'
@@ -156,8 +168,7 @@ def history_rows(runs: list[dict]) -> str:
     rows = []
     for run in reversed(runs):
         s = run["summary"]
-        days = run["first_day"] if run["first_day"] == run["last_day"] else f"{run['first_day']} to {run['last_day']}"
-        days = days or "not recorded"
+        days = run_days(run)
         cpus = ", ".join(f"{c} CPUs" for c in run["cpus"]) or "not recorded"
         controls = f"{s['controls_passed']} of {s['controls']}" if s["controls"] else "none run"
         rows.append(
@@ -168,7 +179,9 @@ def history_rows(runs: list[dict]) -> str:
     return "\n".join(rows)
 
 
-def render(runs: list[dict], faults: dict, categories: dict, *, repo_url: str, commit: str) -> str:
+def render(
+    runs: list[dict], faults: dict, categories: dict, *, repo_url: str, commit: str, notes: dict | None = None
+) -> str:
     latest = runs[-1]
     s = latest["summary"]
     shown = sorted({categories.get(r["fault"], "other") for r in s["rows"] if r["class"] != "control"})
@@ -245,6 +258,8 @@ tr:last-child td {{ border-bottom: 0; }}
 td.num {{ color: var(--muted); font-variant-numeric: tabular-nums; }}
 #faults td:nth-child(2) {{ min-width: 16em; }}
 .why {{ color: var(--muted); font-size: 13px; margin-top: 4px; max-width: 30em; }}
+.note {{ font-size: 13px; margin-top: 6px; max-width: 30em; padding: 6px 8px; border-left: 3px solid var(--fired);
+  background: var(--warn-bg); }}
 .trials a {{ display: inline-block; min-width: 1.6em; text-align: center; }}
 .badge {{ display: inline-block; white-space: nowrap; font-weight: 600; font-size: 13px; }}
 .badge::before {{ content: ""; display: inline-block; width: .6em; height: .6em; border-radius: 50%;
@@ -266,7 +281,7 @@ footer {{ margin-top: 48px; color: var(--muted); font-size: 14px; }}
 real Kubernetes failures{median}.</p>
 <p class="sub">kube-prometheus-stack {escape(", ".join(latest["charts"]))} with its default rules, on a fresh kind
 cluster for every trial. {plural(latest["trials_per_fault"], "trial")} per fault, run
-{escape(latest["first_day"] or "")}. Each fault was confirmed with checks outside the cluster before it was
+{escape(run_days(latest))}. Each fault was confirmed with checks outside the cluster before it was
 scored. Caught means a relevant alert reached a receiver. Time runs from the harm starting to that delivery.</p>
 {trust}
 
@@ -279,7 +294,7 @@ scored. Caught means a relevant alert reached a receiver. Time runs from the har
 <thead><tr><th>#</th><th>Failure</th><th>Area</th><th>Outcome</th><th>Every trial</th><th>Median time</th>
 <th>First relevant alert</th><th>Raw trials</th></tr></thead>
 <tbody>
-{fault_rows(latest, faults, categories, repo_url)}
+{fault_rows(latest, faults, categories, repo_url, notes or {})}
 </tbody>
 </table>
 </div>
