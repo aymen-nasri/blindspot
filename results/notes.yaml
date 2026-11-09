@@ -13,3 +13,8 @@ containerd-stopped: >-
   that placement: alerts fire, and nothing is delivered after about 9 minutes. With Alertmanager
   elsewhere, the outcome could differ. Stopping containerd alone, with no crash, did no harm in v0.3.
   See docs/investigations/kubelet-placement.md.
+memory-pressure: >-
+  In trials 1, 4 and 5, Prometheus ran on the starved node, and about half the watcher's reads of it
+  failed, so a short-lived firing state could have been missed there. Nothing but Watchdog was
+  delivered in any trial, which the receiver records on its own. Trials 2 and 3, read in full, were
+  pending only too.
