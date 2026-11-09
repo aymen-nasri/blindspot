@@ -152,6 +152,7 @@ def undo_scale_cr(p: dict, state: dict) -> None:
 # Every command is fixed here. A fault file only chooses the node and a size, never the command.
 
 FILL_FILE = "/var/lib/blindspot-fill"
+FILL_MARGIN = 32 * 1024 * 1024
 INODE_DIR = "/var/lib/blindspot-inodes"
 STRESS_UNIT = "blindspot-stress"
 STOPPABLE = ("kubelet", "containerd")
@@ -188,13 +189,18 @@ def node_fill_disk(p: dict) -> dict:
     fill_size(0, 1, percent)  # refuse a bad percent before touching the node
     df = on_node(node, "df --output=used,avail -B1 /var/lib/kubelet | tail -1").stdout.split()
     size = fill_size(int(df[0]), int(df[1]), percent)
-    if size:
+    if percent == 100:
+        # fallocate can't take every free byte: the filesystem needs a little for its own bookkeeping, so
+        # asking for exactly what df reports fails. Reserve all but 32 MiB, then write zeros until it's full.
+        on_node(node, f"fallocate -l {max(0, size - FILL_MARGIN)} {FILL_FILE}")
+        on_node(node, f"dd if=/dev/zero of={FILL_FILE}-rest bs=1M status=none", check=False)
+    elif size:
         on_node(node, f"fallocate -l {size} {FILL_FILE}")
     return {"node": node, "bytes": size}
 
 
 def undo_node_fill_disk(_: dict, state: dict) -> None:
-    on_node(state["node"], f"rm -f {FILL_FILE}")
+    on_node(state["node"], f"rm -f {FILL_FILE} {FILL_FILE}-rest")
 
 
 def node_fill_inodes(p: dict) -> dict:
