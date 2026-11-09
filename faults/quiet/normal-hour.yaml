@@ -1,0 +1,14 @@
+id: normal-hour
+number: 0
+name: 'Quiet test: an hour of normal work'
+class: quiet
+runs_on:
+- kind
+window_minutes: 60
+inject:
+- type: normal-operations
+relevant:
+- alertname: .*
+harm: null
+why: Rollouts, scaling, a CronJob and a cordoned node, with nothing broken. Every alert that reaches someone is a
+  false alarm, so a rule that catches more must not make this noisier.

@@ -86,6 +86,24 @@ def prometheus_started() -> str | None:
         return None
 
 
+def quiet_result(result: dict) -> dict:
+    """Noise for a quiet test, and whether the normal work itself hurt users, which makes it invalid."""
+    ignore = {"Watchdog", "InfoInhibitor", *result.get("baseline_alerts", [])}
+    noise = {
+        "delivered": sorted(set(result.get("delivered_after_t0", [])) - ignore),
+        "fired": sorted(set(result.get("firing_after_t0", [])) - ignore),
+    }
+    hurt = [
+        row["minute"]
+        for row in result.get("probe_timeline", [])
+        if row["minute"] >= 0 and row.get("web") and row["web"]["failed"] / row["web"]["n"] > 0.05
+    ]
+    found: dict = {"noise": noise}
+    if hurt:
+        found.update(status="invalid: harm", error=f"the normal work hurt users in minutes {hurt}")
+    return found
+
+
 def wait_for(condition, deadline: float, every: float = 5) -> float | None:
     """Poll until `condition()` is true, and return when it became true, or None at the deadline."""
     while time.time() < deadline:
@@ -185,15 +203,17 @@ def _trial(fault: Fault, lab_dir: Path, receiver_port: int, recorder: Recorder, 
             log(f"harm confirmed after {result['harm_after_t0_s']}s")
         wait_for(lambda: False, t0 + fault.window_minutes * 60, every=15)
         now_started = prometheus_started()
+        # Recorded, not scored: how each probe did minute by minute, and whether harm was still there at the end.
+        result["probe_timeline"] = probe_timeline(recorder.snapshot().probes, t0, time.time())
         if fault.harm:
-            # Recorded, not scored: whether harm was still there at the end, and how it went minute by minute.
             result["harmed_at_end"] = harmed(fault.harm, recorder, time.time())
-            result["probe_timeline"] = probe_timeline(recorder.snapshot().probes, t0, time.time())
         # Prometheus keeps waiting timers across a restart unless its data was lost, so a restart is noted, not fatal.
         result["prometheus_restarted"] = None if not (started and now_started) else started != now_started
         result.update(
             status="valid", window_s=fault.window_minutes * 60, **score(fault, recorder.snapshot(), t0, harm_t)
         )
+        if fault.fault_class == "quiet":
+            result.update(quiet_result(result))
     finally:
         undone_at = time.time()
         result["undo_errors"] = undo_all(done)

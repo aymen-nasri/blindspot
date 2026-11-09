@@ -20,6 +20,7 @@ STEP_TYPES = (
     "node-stress-memory",
     "node-stop-service",
     "node-clock-skew",
+    "normal-operations",
 )
 
 
@@ -78,7 +79,7 @@ class Fault(Strict):
     id: str = Field(pattern=r"^[a-z0-9-]+$")
     number: int = Field(ge=0)
     name: str
-    fault_class: Literal["harm", "early-warning", "monitoring", "control"] = Field(alias="class")
+    fault_class: Literal["harm", "early-warning", "monitoring", "control", "quiet"] = Field(alias="class")
     runs_on: list[Literal["kind", "vm"]]
     window_minutes: int = Field(default=30, ge=5)
     delivery: Literal["on", "off"] = "on"
@@ -90,6 +91,13 @@ class Fault(Strict):
 
     @model_validator(mode="after")
     def _consistent(self) -> "Fault":
+        if self.fault_class == "quiet":
+            # Normal work, no fault: nothing should hurt, and every alert counts as noise.
+            if self.harm is not None or self.expect is not None:
+                raise ValueError("a quiet test has no harm rule and no expected result")
+            if not self.inject or not self.relevant:
+                raise ValueError("a quiet test needs its normal work and a list of what counts as noise")
+            return self
         if self.fault_class != "control":
             if self.expect is not None:
                 raise ValueError("only controls declare an expected result")

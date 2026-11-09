@@ -5,6 +5,8 @@
 
 import json
 import shlex
+import threading
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -264,6 +266,100 @@ def undo_node_clock_skew(_: dict, state: dict) -> None:
     on_node(state["node"], f"date -s '{-state['minutes']:+d} minutes' && timedatectl set-ntp true")
 
 
+# --- normal-operations: an hour of ordinary cluster work, for the quiet test ---------------------
+
+BATCH_NS = "blindspot-batch"
+CRONJOB = {
+    "apiVersion": "batch/v1",
+    "kind": "CronJob",
+    "metadata": {"name": "tick", "namespace": BATCH_NS},
+    "spec": {
+        "schedule": "*/5 * * * *",
+        "jobTemplate": {
+            "spec": {
+                "template": {
+                    "spec": {
+                        "restartPolicy": "OnFailure",
+                        "containers": [
+                            {"name": "tick", "image": "python:3.12-alpine", "command": ["python", "-c", "print('ok')"]}
+                        ],
+                    }
+                }
+            }
+        },
+    },
+}
+BATCH_DEPLOYMENT = {
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {"name": "worker", "namespace": BATCH_NS},
+    "spec": {
+        "replicas": 2,
+        "selector": {"matchLabels": {"app": "worker"}},
+        "template": {
+            "metadata": {"labels": {"app": "worker"}},
+            "spec": {"containers": [{"name": "worker", "image": "registry.k8s.io/pause:3.10"}]},
+        },
+    },
+}
+API = ("-n", "shop")
+
+
+def _restart_api() -> None:
+    kubectl(*API, "rollout", "restart", "deployment/api")
+    kubectl(*API, "rollout", "status", "deployment/api", "--timeout=5m")
+
+
+# (minute after T0, name, action). The schedule is fixed here, and written in docs/method-v0.4.md.
+SCHEDULE: list[tuple[int, str, Callable[[], object]]] = [
+    (
+        0,
+        "create the batch namespace and CronJob",
+        lambda: (kubectl("create", "namespace", BATCH_NS), kubectl("apply", "-f", "-", stdin=json.dumps(CRONJOB))),
+    ),
+    *((m, "rolling restart of the backend", _restart_api) for m in (2, 12, 22, 32, 42, 52)),
+    *((m, "scale the backend to 4", lambda: kubectl(*API, "scale", "deployment/api", "--replicas=4")) for m in (5, 35)),
+    *((m, "scale the backend to 2", lambda: kubectl(*API, "scale", "deployment/api", "--replicas=2")) for m in (8, 38)),
+    (15, "cordon the backend's node", lambda: kubectl("cordon", "blindspot-worker2")),
+    (18, "uncordon the backend's node", lambda: kubectl("uncordon", "blindspot-worker2")),
+    (25, "create a batch Deployment", lambda: kubectl("apply", "-f", "-", stdin=json.dumps(BATCH_DEPLOYMENT))),
+    (45, "delete the batch Deployment", lambda: kubectl("-n", BATCH_NS, "delete", "deployment", "worker")),
+]
+_running: dict[int, threading.Event] = {}
+
+
+def normal_operations(p: dict) -> dict:
+    """Start the schedule in the background. The returned state collects a log of every operation."""
+    state: dict = {"log": []}
+    stop = threading.Event()
+    _running[id(state)] = stop
+    started = time.time()
+    schedule = sorted(SCHEDULE, key=lambda item: item[0])
+
+    def work() -> None:
+        for minute, name, action in schedule:
+            if stop.wait(max(0.0, started + 60 * minute - time.time())):
+                return
+            try:
+                action()
+                ok, error = True, None
+            except Exception as failure:  # noqa: BLE001 - logged; the quiet test goes on
+                ok, error = False, str(failure)[-300:]
+            state["log"].append({"minute": minute, "op": name, "ok": ok, **({"error": error} if error else {})})
+
+    threading.Thread(target=work, daemon=True).start()
+    return state
+
+
+def undo_normal_operations(_: dict, state: dict) -> None:
+    stop = _running.pop(id(state), None)
+    if stop:
+        stop.set()
+    kubectl("uncordon", "blindspot-worker2", check=False)
+    kubectl(*API, "scale", "deployment/api", "--replicas=2", check=False)
+    kubectl("delete", "namespace", BATCH_NS, "--wait=false", "--ignore-not-found", check=False)
+
+
 INJECTORS: dict[str, tuple[Callable[[dict], dict], Callable[[dict, dict], None]]] = {
     "deployment-patch": (deployment_patch, undo_deployment_patch),
     "corefile-block": (corefile_block, undo_corefile_block),
@@ -277,6 +373,7 @@ INJECTORS: dict[str, tuple[Callable[[dict], dict], Callable[[dict, dict], None]]
     "node-stress-memory": (node_stress_memory, undo_node_stress_memory),
     "node-stop-service": (node_stop_service, undo_node_stop_service),
     "node-clock-skew": (node_clock_skew, undo_node_clock_skew),
+    "normal-operations": (normal_operations, undo_normal_operations),
 }
 
 
