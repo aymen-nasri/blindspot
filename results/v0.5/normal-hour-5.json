@@ -1,0 +1,1264 @@
+{
+  "fault": "normal-hour",
+  "trial": 5,
+  "lab": "kind",
+  "profile": "c",
+  "number": 0,
+  "name": "Quiet test: an hour of normal work",
+  "class": "quiet",
+  "chart": "92.22.0",
+  "blindspot": "0.2.0.dev0",
+  "runner": {
+    "python": "3.12.3",
+    "kernel": "7.0.0-1017-azure",
+    "cpus": 4,
+    "memory_gb": 15.6,
+    "ImageOS": "ubuntu24",
+    "ImageVersion": "20261101.360.1",
+    "RUNNER_ENVIRONMENT": "github-hosted"
+  },
+  "started": "2026-11-09T16:49:33Z",
+  "run": "42628449377",
+  "commit": "976678253d76d5a1e62b1b4b59ec3e69c1c609c5",
+  "receiver_url": "http://172.18.0.1:8099/alerts",
+  "targets_down_at_t0": [],
+  "timings": {
+    "scrape_interval": "30s",
+    "evaluation_interval": "30s",
+    "group_wait": "30s",
+    "group_interval": "5m",
+    "repeat_interval": "12h"
+  },
+  "placement": {
+    "monitoring/alertmanager-kps-alertmanager-0": "blindspot-worker2",
+    "monitoring/blackbox-exporter-6878db8bcc-qsvt5": "blindspot-worker2",
+    "monitoring/kps-kube-state-metrics-dc46747f8-z95zn": "blindspot-worker2",
+    "monitoring/kps-operator-78f7865f6b-xrqzz": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-5vqgd": "blindspot-worker",
+    "monitoring/kps-prometheus-node-exporter-gz5r4": "blindspot-worker2",
+    "monitoring/kps-prometheus-node-exporter-h2r48": "blindspot-control-plane",
+    "monitoring/prometheus-kps-prometheus-0": "blindspot-worker",
+    "shop/api-6464b66d59-f6lv2": "blindspot-worker2",
+    "shop/api-6464b66d59-tb78k": "blindspot-worker2",
+    "shop/web-559dc89d8f-7zj5t": "blindspot-worker",
+    "shop/web-559dc89d8f-cz66g": "blindspot-worker"
+  },
+  "inject_state": [
+    {
+      "type": "normal-operations",
+      "state": {
+        "log": [
+          {
+            "minute": 0,
+            "op": "create the batch namespace and CronJob",
+            "ok": true
+          },
+          {
+            "minute": 2,
+            "op": "rolling restart of the backend",
+            "ok": true
+          },
+          {
+            "minute": 5,
+            "op": "scale the backend to 4",
+            "ok": true
+          },
+          {
+            "minute": 8,
+            "op": "scale the backend to 2",
+            "ok": true
+          },
+          {
+            "minute": 12,
+            "op": "rolling restart of the backend",
+            "ok": true
+          },
+          {
+            "minute": 15,
+            "op": "cordon the backend's node",
+            "ok": true
+          },
+          {
+            "minute": 18,
+            "op": "uncordon the backend's node",
+            "ok": true
+          },
+          {
+            "minute": 22,
+            "op": "rolling restart of the backend",
+            "ok": true
+          },
+          {
+            "minute": 25,
+            "op": "create a batch Deployment",
+            "ok": true
+          },
+          {
+            "minute": 32,
+            "op": "rolling restart of the backend",
+            "ok": true
+          },
+          {
+            "minute": 35,
+            "op": "scale the backend to 4",
+            "ok": true
+          },
+          {
+            "minute": 38,
+            "op": "scale the backend to 2",
+            "ok": true
+          },
+          {
+            "minute": 42,
+            "op": "rolling restart of the backend",
+            "ok": true
+          },
+          {
+            "minute": 45,
+            "op": "delete the batch Deployment",
+            "ok": true
+          },
+          {
+            "minute": 52,
+            "op": "rolling restart of the backend",
+            "ok": true
+          }
+        ]
+      }
+    }
+  ],
+  "probe_timeline": [
+    {
+      "minute": -1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 0,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 1,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 2,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 3,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 113
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 4,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 5,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 6,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 7,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 8,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 119,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 119,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 9,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 10,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 11,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 12,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 13,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 11
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 14,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 110
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 11
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 15,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 16,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 94
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 17,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 18,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 19,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 97
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 20,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 21,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 93
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 22,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 95
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 23,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 97
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 24,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 25,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 26,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 27,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 28,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 29,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 91
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 30,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 31,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 32,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 33,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 120
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 34,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 100
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 35,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 36,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 37,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 38,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 39,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 82
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 40,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 8
+      }
+    },
+    {
+      "minute": 41,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 92
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 7
+      }
+    },
+    {
+      "minute": 42,
+      "api": {
+        "n": 5,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 11
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 43,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 44,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 45,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 46,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 119,
+        "failed": 0,
+        "p95_ms": 11
+      },
+      "web": {
+        "n": 119,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 47,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 84
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 48,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 49,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 50,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 51,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 85
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 52,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 89
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 53,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 54,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 55,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 88
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 9
+      }
+    },
+    {
+      "minute": 56,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 11
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 57,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 90
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 58,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 87
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 59,
+      "api": {
+        "n": 6,
+        "failed": 0,
+        "p95_ms": 86
+      },
+      "big": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      },
+      "web": {
+        "n": 120,
+        "failed": 0,
+        "p95_ms": 10
+      }
+    },
+    {
+      "minute": 60
+    }
+  ],
+  "prometheus_restarted": false,
+  "status": "valid",
+  "window_s": 3600,
+  "outcome": "pending only",
+  "first_relevant_alert": "etcdHighCommitDurations",
+  "seconds_after_harm": 685,
+  "time_band": null,
+  "delivered_after_t0": [
+    "Watchdog"
+  ],
+  "firing_after_t0": [],
+  "baseline_alerts": [
+    "Watchdog"
+  ],
+  "seen_before_t0": [
+    "KubeAPIDown",
+    "KubeControllerManagerDown",
+    "KubeSchedulerDown",
+    "Watchdog"
+  ],
+  "watchdog_last_seen_after_t0_s": 3537,
+  "watchdog_deliveries_after_t0": 30,
+  "watcher_reads_after_t0": {
+    "ok": 239,
+    "failed": 0
+  },
+  "noise": {
+    "delivered": [],
+    "fired": []
+  },
+  "undo_errors": []
+}
