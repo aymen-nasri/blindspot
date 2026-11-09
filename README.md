@@ -29,7 +29,7 @@ cluster that users were really hurt, and records whether an alert actually reach
 | | |
 |---|---|
 | **What it does** | Injects one real failure at a time into a disposable Kubernetes cluster, confirms the harm with probes outside the cluster, and records whether the monitoring delivered an alert, fired one that reached nobody, only started waiting, or did nothing |
-| **What it found** | kube-prometheus-stack 92.22.0 with its default rules delivered an alert for **1 of 10 deliberately hard faults**, after a median of about 16 minutes. Every fault gave the same outcome in all 5 of its trials |
+| **What it found** | kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, but **1 of 10 harder infrastructure failures**, each after about 16 minutes. Every fault gave the same outcome in all 5 of its trials |
 | **Built with** | Python · Pydantic · kind · kubeadm · Helm · Prometheus · Alertmanager · blackbox-exporter · promtool · pint · QEMU/KVM · libvirt · cloud-init · Ansible · GitHub Actions · GitHub Pages · Gitleaks · Trivy · CodeQL · Cosign |
 | **Evidence it works** | 70 trials with raw results in Git, 4 controls that test the tool itself (all 20 control trials passed), 147 unit tests, proposed rules checked by `promtool` and `pint` in CI, and scoring rules committed before each run |
 | **Status** | Done on kind (v0.2). Built, with results still coming in: node faults on real VMs, a quiet test for false alarms, and proposed fixes (Profile C). Nothing has run on a production cluster, and it must not |
@@ -53,10 +53,21 @@ cluster that users were really hurt, and records whether an alert actually reach
 
 ## The result
 
-kube-prometheus-stack 92.22.0 with its default rules **delivered an alert for 1 of 10 real failures**,
-after a median of about 16 minutes. Each fault ran 5 times, each time on a fresh kind cluster, and
-checks outside the cluster confirmed the harm before a trial was scored. Every fault gave the same
-outcome in all 5 of its trials, and all 20 control trials passed.
+kube-prometheus-stack 92.22.0 with its default rules caught **all 3 common app failures**, and
+**1 of 10 harder infrastructure failures**, each after about 16 minutes. Each fault ran 5 times, each
+time on a fresh kind cluster, and checks outside the cluster confirmed the harm before a trial was
+scored. Every fault gave the same outcome in all 5 of its trials, and all 20 control trials passed.
+
+**Common app failures** ([results/v0.4](results/v0.4), the failures the defaults are built for):
+
+| # | Failure | What the monitoring did, in 5 of 5 trials |
+|---|---|---|
+| 2 | Out of memory | **Caught.** `KubePodCrashLooping` delivered 942 to 964 s after the app went down |
+| 3 | Bad image in a rollout | **Caught.** `KubePodNotReady` delivered 930 to 971 s after |
+| 4 | All replicas unready | **Caught.** `KubePodNotReady` delivered 930 to 956 s after |
+
+**Harder infrastructure failures** ([results/v0.2](results/v0.2), chosen because their results were
+hard to predict):
 
 | # | Failure | What the monitoring did, in 5 of 5 trials |
 |---|---|---|
@@ -190,9 +201,9 @@ code, so adding a fault means adding a file, and a file can't run arbitrary comm
 | # | Fault | Lab | How it's made | Status |
 |---|---|---|---|---|
 | 1 | App keeps crashing | kind | The container's command becomes `exit 1` | Measured |
-| 2 | Out of memory | kind | A memory limit of 8 MiB | Running |
-| 3 | Bad image in a rollout | kind | An image tag that doesn't exist | Running |
-| 4 | All replicas unready | kind | A readiness probe on a path that returns 404 | Running |
+| 2 | Out of memory | kind | A memory limit of 8 MiB | Measured |
+| 3 | Bad image in a rollout | kind | An image tag that doesn't exist | Measured |
+| 4 | All replicas unready | kind | A readiness probe on a path that returns 404 | Measured |
 | 5 | CPU throttled | kind | A CPU limit of 20 millicores | Measured |
 | 8 | Upstream DNS returns NXDOMAIN | kind | CoreDNS's `template` plugin, for one name | Measured |
 | 9 | DNS very slow | kind | CoreDNS's `erratic` plugin, 5 s on every lookup | Measured |
