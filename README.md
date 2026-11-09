@@ -383,9 +383,7 @@ harness/            the throwaway v0.0 harness, kept so its results can be repro
   release, with an SBOM; its notes show how to verify a file. Still to do: a demo, instructions someone
   else can follow to run one fault, and testing Alertmanager spread across nodes.
 
-## AI use
 
-Built with the help of an AI coding assistant.
 
 ## License
 
