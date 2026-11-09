@@ -334,7 +334,9 @@ footer {{ margin-top: 48px; color: var(--muted); font-size: 14px; }}
 <h1>BlindSpot</h1>
 <p class="headline">Default monitoring caught <strong>{s["caught"]} of {s["of"]}</strong>
 real Kubernetes failures{median}.</p>
-<p class="sub">kube-prometheus-stack {escape(", ".join(charts))} with its default rules, {where}. Each row
+<p class="sub">kube-prometheus-stack {escape(", ".join(charts))} with its default rules, {where}. The faults
+weren't picked at random: most were chosen because their results were hard to predict, so this isn't a catch
+rate for failures in general. Each row
 comes from its fault's most recent run with at least 3 valid trials, and says which. Each fault was confirmed
 with checks outside the cluster before it was scored. Caught means a relevant alert reached a receiver. Time
 runs from the harm starting to that delivery.</p>

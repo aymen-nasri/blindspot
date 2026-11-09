@@ -34,8 +34,12 @@ Earlier runs, with one trial each, gave the same outcomes:
 [docs/method-v0.md](docs/method-v0.md) for one trial, and [docs/method-v0.2.md](docs/method-v0.2.md)
 for combining five, written before the v0.2 run.
 
-**What this does and doesn't show.** Ten faults, on kind, with a small app. It shows that default rules
-miss many infrastructure failures, not what any particular production cluster misses. Many default
+**What this does and doesn't show.** Ten faults, on kind, with a small app. They weren't picked at
+random: the crash was included as one the defaults should catch, and the other nine because their
+results were the hardest to predict. So 1 of 10 isn't a catch rate for failures in general, and common
+app failures such as a bad image or a failing readiness probe are what the default rules are built for.
+It shows that default rules miss many infrastructure failures, not what any particular production
+cluster misses. Many default
 rules wait 15 minutes before firing by design, and the scoring counts those as caught: the crash above
 was caught after about 16 minutes, as designed. The chart sends alerts to a receiver called `null` by
 default, so a real team would also have to configure delivery. This lab did that.
