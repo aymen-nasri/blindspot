@@ -42,6 +42,23 @@ A proposed rule only counts as a fix if it passes all four:
   side by side with Profile A.
 - The positive and negative controls run under Profile C too.
 
+## Change after the first run, before the DNS rerun
+
+In the first Profile C run (42628449377), both DNS faults were missed in all five trials, and neither
+CoreDNS rule even started its wait. The cause is in the faults, not the rules: each fault adds its own
+CoreDNS server block for `example.com`, and that block had no `prometheus` plugin. CoreDNS only counts
+requests in blocks that have it, so the broken lookups never appeared in CoreDNS's metrics, and no rule
+reading them could fire. In a real outage, where the upstream server is slow or says the name doesn't
+exist, those lookups go through the main block, which is counted.
+
+Change: each DNS fault's block now includes `prometheus :9153`, the same address as the main block.
+Both DNS faults rerun five times under Profile C into `results/v0.5.1`. The relevance rules don't
+change, so the app probe alert, which did fire and was delivered in those trials, still doesn't count.
+
+They don't rerun under Profile A: the defaults have no rule that reads CoreDNS metrics, so counting the
+lookups can't change what they do. That's reasoning, not a measurement. The page shows which run each
+row came from: Profile A's DNS rows are from v0.2, before this change.
+
 ## Predictions, written before the run
 
 - DNS faults: caught after about 6 to 10 minutes, by the CoreDNS rules.
