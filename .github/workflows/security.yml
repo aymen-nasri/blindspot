@@ -1,0 +1,59 @@
+name: security
+
+# Secrets in the whole history, vulnerable packages, and misconfigurations: on every push, every pull
+# request, and weekly, because new vulnerabilities are published against packages that haven't changed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Scan every commit for secrets
+        run: |
+          curl -fsSLo gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tgz" | sha256sum -c
+          tar xzf gitleaks.tgz gitleaks
+          ./gitleaks git --redact --exit-code 1 --verbose .
+
+  trivy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Trivy, checking its checksum
+        run: |
+          curl -fsSLo trivy.tgz https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz
+          echo "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf  trivy.tgz" | sha256sum -c
+          tar xzf trivy.tgz trivy
+      - name: List the exact packages BlindSpot installs
+        run: |
+          python3 -m venv /tmp/env
+          /tmp/env/bin/pip install --quiet .
+          mkdir -p /tmp/lock
+          /tmp/env/bin/pip freeze --exclude blindspot > /tmp/lock/requirements.txt
+          cat /tmp/lock/requirements.txt
+      - name: Block on high or critical vulnerabilities in those packages
+        run: ./trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 /tmp/lock
+      - name: Block on secrets in the files
+        run: ./trivy fs --scanners secret --exit-code 1 .
+      - name: Report misconfigurations, without blocking
+        # The lab's reference app is deliberately simple, so its manifests are reported, not enforced.
+        run: |
+          {
+            echo '### Trivy misconfiguration report (not blocking)'
+            echo '```'
+            ./trivy fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 0 . || true
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
