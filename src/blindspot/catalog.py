@@ -7,7 +7,20 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-STEP_TYPES = ("deployment-patch", "corefile-block", "pod-netem", "route-mtu", "apply", "scale-cr", "noop")
+STEP_TYPES = (
+    "deployment-patch",
+    "corefile-block",
+    "pod-netem",
+    "route-mtu",
+    "apply",
+    "scale-cr",
+    "noop",
+    "node-fill-disk",
+    "node-fill-inodes",
+    "node-stress-memory",
+    "node-stop-service",
+    "node-clock-skew",
+)
 
 
 class Strict(BaseModel):

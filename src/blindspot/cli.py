@@ -22,7 +22,12 @@ def faults_list(args) -> int:
 
 def doctor(args) -> int:
     ok = True
-    for tool in ("docker", "kind", "kubectl", "helm"):
+    tools = (
+        ("docker", "kind", "kubectl", "helm")
+        if lab.TYPE == "kind"
+        else ("virsh", "ansible-playbook", "kubectl", "helm")
+    )
+    for tool in tools:
         found = shutil.which(tool)
         print(f"{'ok ' if found else 'MISSING'} {tool}")
         ok &= bool(found)
@@ -54,6 +59,10 @@ def run_cmd(args) -> int:
         print(f"unknown fault {args.fault!r}. Try: blindspot faults list", file=sys.stderr)
         return 2
     fault = faults[args.fault]
+    if lab.TYPE not in fault.runs_on:
+        # Never fake a fault on a lab that can't make it honestly: kind can't fill a real node's disk.
+        print(f"{fault.id} runs on {', '.join(fault.runs_on)}, not on the {lab.TYPE} lab", file=sys.stderr)
+        return 2
     failed = 0
     # Each trial gets its own fresh cluster. In CI, each job runs one trial and passes its number with --trial.
     for trial in range(args.trial, args.trial + args.trials):
@@ -103,6 +112,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="blindspot", description=__doc__)
     parser.add_argument("--catalog", default="faults", help="directory of fault files")
     parser.add_argument("--lab", default="lab", help="directory with kind.yaml, kps-values.yaml and workload.yaml")
+    parser.add_argument("--lab-type", choices=lab.LAB_TYPES, default="kind", help="kind, or real VMs from vmlab/")
+    parser.add_argument("--vmlab", default="vmlab", help="directory with the VM lab's scripts")
     sub = parser.add_subparsers(dest="command", required=True)
 
     faults = sub.add_parser("faults", help="list the fault catalogue")
@@ -139,7 +150,11 @@ def main(argv: list[str] | None = None) -> int:
     report_parser.set_defaults(func=report_cmd)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    lab.use(args.lab_type, Path(args.vmlab))
+    try:
+        return args.func(args)
+    finally:
+        lab.use("kind")
 
 
 if __name__ == "__main__":

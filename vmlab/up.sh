@@ -55,7 +55,10 @@ fi
 
 for node in "${NODES[@]}"; do
   read -r name ip mac vcpus memory <<<"$node"
-  sudo virsh net-update default add ip-dhcp-host "<host mac='$mac' name='$name' ip='$ip'/>" --live --config
+  entry="<host mac='$mac' name='$name' ip='$ip'/>"
+  # Remove any entry left by an earlier lab on this machine, so a second run doesn't fail here.
+  sudo virsh net-update default delete ip-dhcp-host "$entry" --live --config >/dev/null 2>&1 || true
+  sudo virsh net-update default add ip-dhcp-host "$entry" --live --config
   sudo qemu-img create -q -f qcow2 -F qcow2 -b "$base" "$images/$name.qcow2" "${disk_gb}G"
   {
     echo "#cloud-config"
