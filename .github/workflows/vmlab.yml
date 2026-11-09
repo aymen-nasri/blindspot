@@ -34,7 +34,8 @@ jobs:
       - name: Install QEMU, libvirt and Ansible
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends qemu-system-x86 qemu-utils libvirt-daemon-system virtinst
+          # Recommended packages included: libvirt needs dnsmasq for its network, and QEMU its NIC boot ROMs.
+          sudo apt-get install -y -q qemu-system-x86 qemu-utils libvirt-daemon-system virtinst dnsmasq-base xorriso
           python3 -m pip install --quiet ansible-core==2.21.6
 
       - name: Start three VMs
